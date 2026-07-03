@@ -1,6 +1,6 @@
 # Phase 2 build log — EPUB + books (v0.3.0)
 
-**Status:** ◐ code complete + verified locally (real EPUB built); awaiting UR1 redeploy.
+**Status:** ☑ done — deployed on UR1; EPUB and PDF confirmed to build and open correctly.
 
 ## What was built
 
@@ -48,8 +48,8 @@ UR1 are preserved. Source novel stays the `Book` table (UI calls it "Novel"; UI 
   to `/output` (mapped to `/mnt/user/media/books/webnovels`). This is what was missing when
   "the build ran but no file appeared" — Phase 1 only populated the DB; Phase 2 produces the file.
 
-## Remaining to close the phase
+## Deploy confirmation
 
-- Redeploy on UR1 (rebuild — `ebooklib` added, new `Volume` table). Confirm `/mnt/user/media/
-  books/webnovels` exists, define a book, build, and check the EPUB lands on the share and
-  reads on the Paperwhite.
+- Confirmed on UR1: books build and both the EPUB and PDF land in `/mnt/user/media/books/
+  webnovels` and open correctly. Phase closed ☑. (En route, an additive-migration fix was
+  added for the `pdf_path` column, and the Docker sources were moved into `docker/`.)

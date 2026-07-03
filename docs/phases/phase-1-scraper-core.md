@@ -1,6 +1,6 @@
 # Phase 1 build log — Scraper core (v0.2.0)
 
-**Status:** ◐ code complete + verified against the live site; awaiting UR1 redeploy confirmation.
+**Status:** ☑ done — deployed on UR1; import + chapter download confirmed (books build from the downloaded chapters).
 
 ## What was built
 
@@ -57,7 +57,7 @@ requirements.txt           + httpx, beautifulsoup4
 - Politeness (rate limit, robots, retries) lives in `fetch.py`, inherited by every adapter
   (ADR 0004). `robots.txt` for freewebnovel allows all (`Disallow:` empty).
 
-## Remaining to close the phase
+## Deploy confirmation
 
-- Redeploy on UR1 (Compose Manager rebuild — dependencies changed) and confirm import +
-  download work from the browser against the live site.
+- Confirmed on UR1: novels import and chapters download; Phase 2 builds EPUB/PDF from those
+  stored chapters. Phase closed ☑.
