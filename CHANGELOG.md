@@ -7,6 +7,10 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.4.1] — 2026-07-03
+
 ### Added
 - **Rescan for new chapters:** a button on the Novel page re-reads the source novel page and adds
   any newly-published chapters (idempotent — existing downloaded chapters are untouched), reporting
