@@ -81,8 +81,12 @@ Legend: ☐ not started · ◐ in progress · ☑ done
     range (`start`, `end`) with a book number + optional title. A whole novel is just one
     book spanning 1..N. Handles multi-book series (e.g. Shadow Slave Book 1–10). See
     [ADR 0006](decisions/0006-books-and-volumes.md).
-  - EPUB builder (EbookLib): metadata (title, author, language), cover (fetched from source),
-    `calibre:series` metadata so books group in Calibre/Kavita, navigable TOC, one XHTML per chapter.
+  - EPUB builder (EbookLib): metadata (title, author, language), `calibre:series` metadata so
+    books group in Calibre/Kavita, navigable TOC, one XHTML per chapter.
+  - **Cover art (☑ done):** download the cover image from the source novel page and embed it
+    in the EPUB (`_fetch_cover` → EbookLib `set_cover`). Skipped only if the source has no cover
+    or `cover_style = none`. *Gap:* no generated placeholder yet when a source lacks a cover
+    (see open decision D7).
   - Optional **PDF** per book (fpdf2, pure-Python) written alongside the EPUB; toggle
     `format_epub` / `format_pdf` in Settings. See [ADR 0007](decisions/0007-also-emit-pdf.md).
   - Range-limited download so each book fetches only its own chapters (idempotent).
@@ -159,6 +163,7 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 | D3 | Optional delivery integrations | Calibre `calibredb`, Kavita watch-folder, or Send-to-Kindle email — deferred past v1.0 unless wanted sooner. File share is the v1 contract. |
 | D4 | AZW3/MOBI output | Only if Send-to-Kindle isn't your workflow; needs Calibre in-container. Deferred. |
 | D5 | Auth'd/paywalled sources | Out of scope by policy — see [ADR 0004](decisions/0004-legal-and-ethical-use.md). |
+| D7 | Placeholder cover | When a source has no cover image, should we generate a simple title/author placeholder cover? Currently the EPUB just has no cover in that case. `cover_style=simple` is a stub for this. |
 | D6 | Product name | GitHub repo is [`rhamblen/webnovel-to-epub-scraper`](https://github.com/rhamblen/webnovel-to-epub-scraper); a friendlier display name (e.g. "PaperNovel") can still be adopted before first release. |
 
 ## Future / nice-to-have (post-1.0)
