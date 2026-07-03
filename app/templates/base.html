@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Webnovel to EPUB Scraper{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- HTMX is used from later phases for live job progress / partial updates. -->
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📚 Webnovel&nbsp;→&nbsp;EPUB</div>
+    <nav>
+      <a href="/discover" class="{{ 'on' if active == 'discover' }}">Discover</a>
+      <a href="/library"  class="{{ 'on' if active == 'library'  }}">Library</a>
+      <a href="/jobs"     class="{{ 'on' if active == 'jobs'     }}">Jobs</a>
+      <a href="/settings" class="{{ 'on' if active == 'settings' }}">Settings</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="foot">
+    <span>Personal-use tool — respect each site's terms &amp; rate limits.</span>
+  </footer>
+</body>
+</html>

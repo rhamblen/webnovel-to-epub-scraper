@@ -23,7 +23,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 
 | Version | Status | Features |
 |---------|--------|----------|
-| v0.1.0  | ☐ planned | App skeleton: container, web UI shell, settings, SQLite, health check |
+| v0.1.0  | ◐ in progress | App skeleton: container, web UI shell, settings, SQLite, health check |
 | v0.2.0  | ☐ planned | Scraper core + first curated adapter (TOC + chapter extraction) |
 | v0.3.0  | ☐ planned | Assembler + EPUB output written to file share — end-to-end MVP |
 | v0.4.0  | ☐ planned | Discovery: search by title, recommend best source site |

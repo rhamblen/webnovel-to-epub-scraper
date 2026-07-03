@@ -10,6 +10,7 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 ### Added
 - Initial project documentation: README, phased project plan, architecture notes, AI cold-start context, and ADRs 0001–0005 (tech stack, EPUB/file-share delivery, adapter strategy, legal/ethical use, Unraid Compose Manager deploy workflow).
 - MIT license and `.gitignore`.
+- **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
 ### Notes
 - Planning stage only — no application code yet. All phases are ☐ not started.

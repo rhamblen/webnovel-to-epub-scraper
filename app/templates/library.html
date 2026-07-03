@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Library — Webnovel to EPUB Scraper{% endblock %}
+{% block content %}
+<h1>Library</h1>
+<p class="muted">Your books and their build status.</p>
+{% if books %}
+<table class="grid">
+  <thead><tr><th>Title</th><th>Author</th><th>Source</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for b in books %}
+    <tr>
+      <td>{{ b.title }}</td>
+      <td>{{ b.author }}</td>
+      <td>{{ b.source_site or "—" }}</td>
+      <td><span class="badge {{ b.status }}">{{ b.status }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="card placeholder">
+  <p>No books yet. Adding and building books arrives in Phases 2–3.</p>
+</div>
+{% endif %}
+{% endblock %}

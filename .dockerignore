@@ -1,0 +1,13 @@
+.git
+.gitignore
+docs
+.localdata
+config
+output
+__pycache__
+**/__pycache__
+*.pyc
+.venv
+venv
+.env
+*.md

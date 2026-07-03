@@ -1,0 +1,24 @@
+# Deployed on Unraid via the Compose Manager plugin.
+# Copy this stack to /mnt/user/appdata/webnovel-to-epub-scraper-docker/ and use
+# Compose Manager -> Compose Up. Do NOT run `docker compose` from the shell in that
+# folder: the CLI would take the folder name as the project name and mis-tag the image.
+#
+# `image:` and `container_name:` are pinned explicitly so the tag/name are stable
+# regardless of the project name Compose Manager derives. A named network is not
+# needed here — this is a single container with no siblings to resolve.
+services:
+  webnovel-to-epub-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: webnovel-to-epub-scraper:latest
+    container_name: webnovel-to-epub-scraper
+    environment:
+      - WN_DATA_DIR=/config
+      - WN_OUTPUT_DIR=/output
+    ports:
+      - "8577:8080"          # host:container — change the host port if 8577 is taken
+    volumes:
+      - /mnt/user/appdata/webnovel-to-epub-scraper/config:/config   # persistent state (SQLite)
+      - /mnt/user/books:/output                                     # <-- set to your books share
+    restart: unless-stopped

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Settings — Webnovel to EPUB Scraper{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<p class="muted">Where books are stored and how politely the scraper behaves.</p>
+
+{% if saved %}<div class="notice ok">Settings saved.</div>{% endif %}
+
+<form method="post" action="/settings" class="card">
+  {% for f in fields %}
+  <div class="field">
+    <label for="{{ f.key }}">{{ f.label }}</label>
+    {% if f.type == "checkbox" %}
+      <input type="checkbox" id="{{ f.key }}" name="{{ f.key }}"
+             {% if values[f.key] == "true" %}checked{% endif %}>
+    {% elif f.type == "select" %}
+      <select id="{{ f.key }}" name="{{ f.key }}">
+        {% for opt in f.options %}
+        <option value="{{ opt }}" {% if values[f.key] == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <input type="{{ f.type }}" id="{{ f.key }}" name="{{ f.key }}"
+             value="{{ values[f.key] }}" {% if f.step %}step="{{ f.step }}"{% endif %}>
+    {% endif %}
+    <small>{{ f.help }}</small>
+  </div>
+  {% endfor %}
+  <div class="actions">
+    <button type="submit">Save settings</button>
+  </div>
+</form>
+{% endblock %}
