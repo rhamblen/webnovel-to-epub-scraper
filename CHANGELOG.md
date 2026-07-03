@@ -14,6 +14,8 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
   Route `POST /novels/{id}/rescan`.
 
 ### Changed
+- **Default output path is now `/mnt/user/media/reading/webnovels`** (was `.../media/books/webnovels`)
+  in `docker-compose.yml`. The container still writes to `/output`; only the host bind mount changed.
 - **EPUB opens on its cover.** The cover page is now first in the reading order (spine), in addition
   to the `<meta name="cover">` + EPUB3 `cover-image` metadata that already drives the Kindle library
   thumbnail — so the book both shows a cover in the library and opens on it.

@@ -91,7 +91,7 @@ Legend: ☐ not started · ◐ in progress · ☑ done
     `format_epub` / `format_pdf` in Settings. See [ADR 0007](decisions/0007-also-emit-pdf.md).
   - Range-limited download so each book fetches only its own chapters (idempotent).
   - Delivery writer: atomically write `<Novel> - Book NN[ - Title].epub` to the configured
-    output path (`/output` → `/mnt/user/media/books/webnovels`); safe filename handling.
+    output path (`/output` → `/mnt/user/media/reading/webnovels`); safe filename handling.
   - Novel detail page: define books, build/rebuild each, see status + output filename.
 - **Prerequisites:** Phases 0–1.
 - **Deliverables:** a validated EPUB (correct structure, cover, series metadata) per book,

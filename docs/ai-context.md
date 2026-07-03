@@ -27,7 +27,7 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
 ## Environment / target host
 
 - Deploys to **Unraid** (user has UR1 and UR2; Calibre + Kavita run on UR1).
-- Volumes: `/config` (state) and `/output` → **`/mnt/user/media/books/webnovels`** (UR1 has no dedicated books share; this is under the existing `media` share). HTTP port default 8080 (host 8577).
+- Volumes: `/config` (state) and `/output` → **`/mnt/user/media/reading/webnovels`** (UR1 has no dedicated books share; this is under the existing `media` share). HTTP port default 8080 (host 8577).
 - **Repo layout:** the deployable unit is the repo's **`docker/`** folder (`Dockerfile`, `docker-compose.yml`, `requirements.txt`, `app/`). Docs/README/LICENSE stay at repo root. Build context = `docker/`.
 - **Deploy = Unraid Compose Manager plugin.** The *user* copies the contents of `docker/` to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/` (or clones + points Compose Manager at `docker/docker-compose.yml`), then **Compose Up**. See [ADR 0005](decisions/0005-unraid-deploy-workflow.md).
 - **Build division of labour:** Claude edits Docker source **locally only**; the user copies to appdata + deploys. Never emit raw `docker compose` CLI for the appdata folder (project-name footgun → wrong tags/network). End deploy-affecting changes with a **▶ YOUR TURN** block.

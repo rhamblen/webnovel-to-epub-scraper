@@ -20,5 +20,5 @@ services:
       - "8577:8080"          # host:container — change the host port if 8577 is taken
     volumes:
       - /mnt/user/appdata/webnovel-to-epub-scraper/config:/config          # persistent state (SQLite)
-      - /mnt/user/media/books/webnovels:/output                            # finished EPUBs land here
+      - /mnt/user/media/reading/webnovels:/output                          # finished EPUBs/PDFs land here
     restart: unless-stopped
