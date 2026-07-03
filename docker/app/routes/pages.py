@@ -127,9 +127,15 @@ def novel_detail(request: Request, book_id: int, error: str | None = None):
         max_ch = max((c.number for c in s.exec(select(Chapter).where(Chapter.book_id == book_id)).all()), default=0)
         volumes = s.exec(select(Volume).where(Volume.book_id == book_id).order_by(Volume.number)).all()
         vols = []
+        prev_end = 0  # expected start of the first book is chapter 1
         for v in volumes:
             v_total, v_done = _counts(s, book_id, v.start_chapter, v.end_chapter)
-            vols.append({"v": v, "total": v_total, "done": v_done, "building": v.id in _building})
+            expected = prev_end + 1
+            vols.append({
+                "v": v, "total": v_total, "done": v_done, "building": v.id in _building,
+                "seq_ok": v.start_chapter == expected, "expected_start": expected,
+            })
+            prev_end = v.end_chapter
         # Defaults for the "add a book" form: next book number, and start = one past the
         # furthest chapter any existing book covers (so books stay sequential).
         next_number = max((v.number for v in volumes), default=0) + 1

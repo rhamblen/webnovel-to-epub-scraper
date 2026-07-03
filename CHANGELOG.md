@@ -15,6 +15,10 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 - **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
 ### Added
+- **Out-of-sequence book flag:** on the Novel page, a book whose start chapter isn't exactly one
+  past the previous book's end (a gap or overlap; the first book is expected to start at 1) is
+  highlighted with a warning card and a message stating the expected start — so ranges that need
+  correcting are obvious. Also added `.notice.warn`/`.notice.err` styles.
 - **Book covers in the UI:** Discover search results now show a cover thumbnail, and the Novel
   page shows the cover. Images are served through a `/cover` proxy restricted to hosts a curated
   adapter recognizes (so it isn't an open proxy), which also avoids browser hotlink/referer issues.

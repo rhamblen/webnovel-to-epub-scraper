@@ -21,7 +21,12 @@
   range and Save, then Build. A whole novel in one file = start 1, end {{ max_ch }}.</p>
 
 {% for row in vols %}
-<div class="card" style="margin-bottom:0.75rem">
+<div class="card {% if not row.seq_ok %}warn{% endif %}" style="margin-bottom:0.75rem">
+  {% if not row.seq_ok %}
+  <div class="notice warn" style="margin-bottom:.6rem">⚠ Out of sequence — starts at chapter
+    {{ row.v.start_chapter }}, expected {{ row.expected_start }} (right after the previous book).
+    Fix the start and Save.</div>
+  {% endif %}
   <form method="post" action="/volumes/{{ row.v.id }}/edit"
         style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;margin:0">
     <div class="field" style="max-width:90px;margin:0"><label>Book #</label>

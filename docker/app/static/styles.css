@@ -88,6 +88,9 @@ button.ghost:hover { color: var(--err); border-color: var(--err); filter: none; 
 
 .notice { padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 1rem; }
 .notice.ok { background: rgba(63,185,80,0.15); border: 1px solid var(--ok); }
+.notice.warn { background: rgba(210,153,34,0.15); border: 1px solid var(--warn); }
+.notice.err { background: rgba(248,81,73,0.15); border: 1px solid var(--err); }
+.card.warn { border-color: var(--warn); }
 
 .grid { width: 100%; border-collapse: collapse; }
 .grid th, .grid td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); }
