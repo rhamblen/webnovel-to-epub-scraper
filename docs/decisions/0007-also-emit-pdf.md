@@ -21,6 +21,8 @@ readers/devices and archival.
   punctuation is normalized to ASCII and any remaining non-latin-1 character is replaced.
   Fine for English web novels; non-latin scripts would need a bundled Unicode TTF (deferred).
 - `Volume` gains a `pdf_path` column (additive).
+- **Page size** is a setting (`pdf_page_size`, `A5` default / `A4`). A5 gives larger relative
+  text for reading; A4 is standard document size.
 
 ## Consequences
 

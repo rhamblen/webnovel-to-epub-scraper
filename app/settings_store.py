@@ -19,6 +19,7 @@ def _defaults() -> dict[str, str]:
         "user_agent": "",
         "format_epub": "true",
         "format_pdf": "true",
+        "pdf_page_size": "A5",
     }
 
 
@@ -76,6 +77,14 @@ FIELDS = [
         "label": "Build PDF",
         "type": "checkbox",
         "help": "Also produce a .pdf for each book (fixed layout; handy for other readers).",
+    },
+    {
+        "key": "pdf_page_size",
+        "label": "PDF page size",
+        "type": "select",
+        "options": ["A5", "A4"],
+        "help": "Page size for the PDF. A5 gives larger relative text (better for reading); "
+        "A4 is standard document size.",
     },
     {
         "key": "user_agent",

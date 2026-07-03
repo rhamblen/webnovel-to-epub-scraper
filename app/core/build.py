@@ -116,7 +116,10 @@ async def build_volume(engine, volume_id: int) -> dict:
         if want_pdf:
             ppath = base + ".pdf"
             tmp = ppath + ".part"
-            build_pdf(tmp, title=vtitle, author=book.author, chapters=docs)
+            build_pdf(
+                tmp, title=vtitle, author=book.author, chapters=docs,
+                page_size=cfg.get("pdf_page_size", "A5"),
+            )
             os.replace(tmp, ppath)
             vol.pdf_path = ppath
 

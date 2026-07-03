@@ -38,8 +38,10 @@ def build_pdf(
     title: str,
     author: str,
     chapters: list[ChapterDoc],
+    page_size: str = "A5",
 ) -> str:
-    pdf = FPDF(format="A5")
+    page_size = page_size if page_size in ("A4", "A5") else "A5"
+    pdf = FPDF(format=page_size)
     pdf.set_title(title)
     pdf.set_author(author or "Unknown")
     pdf.set_auto_page_break(auto=True, margin=15)
