@@ -79,6 +79,12 @@ button {
   cursor: pointer;
 }
 button:hover { filter: brightness(1.07); }
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+button.ghost:hover { color: var(--err); border-color: var(--err); filter: none; }
 
 .notice { padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 1rem; }
 .notice.ok { background: rgba(63,185,80,0.15); border: 1px solid var(--ok); }

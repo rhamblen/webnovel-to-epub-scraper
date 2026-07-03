@@ -15,6 +15,11 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 - **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
 ### Added
+- **Edit/delete books + sequential ranges:** each book on the Novel page is now an editable card
+  — correct its number/title/start/end and Save, or Delete it. The "Add a book" form defaults the
+  **start chapter to one past the furthest existing book** (and the next book number), so books
+  stay sequential; every field is still adjustable before adding. Routes: `POST /volumes/{id}/edit`,
+  `POST /volumes/{id}/delete`.
 - **Phase 3 discovery — title search (v0.4.0, freewebnovel):** a Discover search box queries the
   sites listed in the new **`search_sites`** setting (a multi-select auto-populated from adapters
   that support search; freewebnovel only for now, more sites later). Results show title + chapter

@@ -91,33 +91,73 @@ def novel_detail(request: Request, book_id: int, error: str | None = None):
             return RedirectResponse(url="/library", status_code=303)
         total, done = _counts(s, book_id)
         max_ch = max((c.number for c in s.exec(select(Chapter).where(Chapter.book_id == book_id)).all()), default=0)
+        volumes = s.exec(select(Volume).where(Volume.book_id == book_id).order_by(Volume.number)).all()
         vols = []
-        for v in s.exec(select(Volume).where(Volume.book_id == book_id).order_by(Volume.number)).all():
+        for v in volumes:
             v_total, v_done = _counts(s, book_id, v.start_chapter, v.end_chapter)
             vols.append({"v": v, "total": v_total, "done": v_done, "building": v.id in _building})
+        # Defaults for the "add a book" form: next book number, and start = one past the
+        # furthest chapter any existing book covers (so books stay sequential).
+        next_number = max((v.number for v in volumes), default=0) + 1
+        next_start = min(max((v.end_chapter for v in volumes), default=0) + 1, max_ch) if max_ch else 1
     return templates.TemplateResponse(
         request, "novel.html",
         {"active": "library", "book": book, "total": total, "done": done,
-         "max_ch": max_ch, "vols": vols, "error": error},
+         "max_ch": max_ch, "vols": vols, "error": error,
+         "next_number": next_number, "next_start": next_start},
     )
+
+
+def _parse_volume_fields(form) -> tuple[int, str, int, int]:
+    number = int(str(form.get("number", "")).strip())
+    start = int(str(form.get("start", "")).strip())
+    end = int(str(form.get("end", "")).strip())
+    title = str(form.get("title", "")).strip()
+    if number < 1 or start < 1 or end < start:
+        raise ValueError("number >= 1, start >= 1, and end >= start")
+    return number, title, start, end
 
 
 @router.post("/novels/{book_id}/volumes")
 async def add_volume(request: Request, book_id: int):
     form = await request.form()
     try:
-        number = int(str(form.get("number", "")).strip())
-        start = int(str(form.get("start", "")).strip())
-        end = int(str(form.get("end", "")).strip())
-        title = str(form.get("title", "")).strip()
-        if start < 1 or end < start:
-            raise ValueError("start must be >= 1 and end >= start")
+        number, title, start, end = _parse_volume_fields(form)
     except (ValueError, TypeError) as e:
-        return RedirectResponse(url=f"/novels/{book_id}?error=Invalid+range:+{e}", status_code=303)
+        return RedirectResponse(url=f"/novels/{book_id}?error=Invalid+book:+{e}", status_code=303)
     with Session(get_engine()) as s:
         s.add(Volume(book_id=book_id, number=number, title=title, start_chapter=start, end_chapter=end))
         s.commit()
     return RedirectResponse(url=f"/novels/{book_id}", status_code=303)
+
+
+@router.post("/volumes/{volume_id}/edit")
+async def edit_volume(request: Request, volume_id: int):
+    form = await request.form()
+    with Session(get_engine()) as s:
+        vol = s.get(Volume, volume_id)
+        if vol is None:
+            return RedirectResponse(url="/library", status_code=303)
+        book_id = vol.book_id
+        try:
+            number, title, start, end = _parse_volume_fields(form)
+        except (ValueError, TypeError) as e:
+            return RedirectResponse(url=f"/novels/{book_id}?error=Invalid+book:+{e}", status_code=303)
+        vol.number, vol.title, vol.start_chapter, vol.end_chapter = number, title, start, end
+        s.add(vol)
+        s.commit()
+    return RedirectResponse(url=f"/novels/{book_id}", status_code=303)
+
+
+@router.post("/volumes/{volume_id}/delete")
+async def delete_volume(volume_id: int):
+    with Session(get_engine()) as s:
+        vol = s.get(Volume, volume_id)
+        book_id = vol.book_id if vol else None
+        if vol is not None:
+            s.delete(vol)
+            s.commit()
+    return RedirectResponse(url=f"/novels/{book_id}" if book_id else "/library", status_code=303)
 
 
 @router.post("/volumes/{volume_id}/build")
