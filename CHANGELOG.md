@@ -7,6 +7,15 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 ## [Unreleased]
 
+### Changed
+- **Tidied the Settings page.** Options are now grouped into **Scraping / Output / Discovery** with
+  clearer help text. Removed three redundant settings that weren't wired to anything
+  (`default_language`, `default_author`, `strip_translator_notes` — the last returns with the
+  Phase 7 content-cleaning work). Replaced the confusing `cover_style` (simple/none) select with a
+  plain **Embed book cover** checkbox.
+- **Consistent book cards on the Novel page.** Each output file (📗 EPUB, 📕 PDF) is now on its own
+  line, and the Build/Delete buttons sit on their own line — no more inconsistent wrapping.
+
 ### Added
 - **Live build progress:** while a book builds, the Novel page shows a live progress bar with a
   status message (Downloading chapters X/Y → Building EPUB → Building PDF → Done), polling

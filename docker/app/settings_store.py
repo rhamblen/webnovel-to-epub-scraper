@@ -13,14 +13,11 @@ def _defaults() -> dict[str, str]:
     return {
         "concurrency": "2",
         "request_delay_seconds": "1.0",
-        "default_language": "en",
-        "default_author": "Unknown",
-        "strip_translator_notes": "false",
-        "cover_style": "simple",
         "user_agent": "",
         "format_epub": "true",
         "format_pdf": "true",
         "pdf_page_size": "A5",
+        "embed_cover": "true",
         # Comma-separated list of adapter names the Discover search queries.
         "search_sites": "freewebnovel",
     }
@@ -30,79 +27,71 @@ def _defaults() -> dict[str, str]:
 # Note: the output location is intentionally NOT a setting — it's fixed at /output inside
 # the container and mapped to a host path by docker-compose (see config.output_dir).
 FIELDS = [
+    # --- Scraping ---
     {
         "key": "concurrency",
+        "section": "Scraping",
         "label": "Max concurrent requests",
         "type": "number",
         "step": "1",
-        "help": "How many chapter fetches run at once. Keep low to be polite (2–4).",
+        "help": "How many chapters download at once. Keep low (2–4) to be polite to the site.",
     },
     {
         "key": "request_delay_seconds",
+        "section": "Scraping",
         "label": "Delay between requests (seconds)",
         "type": "number",
         "step": "0.1",
         "help": "Minimum pause between requests to the same site.",
     },
     {
-        "key": "default_language",
-        "label": "Default language",
+        "key": "user_agent",
+        "section": "Scraping",
+        "label": "Custom User-Agent (optional)",
         "type": "text",
-        "help": "ISO code for EPUB metadata when a source doesn't specify one (e.g. en).",
+        "help": "Leave blank to use the built-in browser-like default. Only set this if a "
+        "particular site needs a specific User-Agent.",
     },
-    {
-        "key": "default_author",
-        "label": "Default author",
-        "type": "text",
-        "help": "Used when a novel's author can't be detected.",
-    },
-    {
-        "key": "strip_translator_notes",
-        "label": "Strip translator / pre- & post-chapter notes",
-        "type": "checkbox",
-        "help": "Remove common translator note blocks from chapter bodies.",
-    },
-    {
-        "key": "cover_style",
-        "label": "Generated cover style",
-        "type": "select",
-        "options": ["simple", "none"],
-        "help": "Placeholder cover generated when the source has no cover image.",
-    },
+    # --- Output ---
     {
         "key": "format_epub",
+        "section": "Output",
         "label": "Build EPUB",
         "type": "checkbox",
-        "help": "Produce an .epub for each book (best for Kindle Paperwhite).",
+        "help": "Create an .epub for each book (recommended for Kindle Paperwhite).",
     },
     {
         "key": "format_pdf",
+        "section": "Output",
         "label": "Build PDF",
         "type": "checkbox",
-        "help": "Also produce a .pdf for each book (fixed layout; handy for other readers).",
+        "help": "Also create a .pdf for each book.",
     },
     {
         "key": "pdf_page_size",
+        "section": "Output",
         "label": "PDF page size",
         "type": "select",
         "options": ["A5", "A4"],
-        "help": "Page size for the PDF. A5 gives larger relative text (better for reading); "
-        "A4 is standard document size.",
+        "help": "A5 = larger text, better for reading; A4 = standard document size. "
+        "Only used when Build PDF is on.",
     },
     {
-        "key": "user_agent",
-        "label": "User-Agent (optional)",
-        "type": "text",
-        "help": "Override the HTTP User-Agent sent to sites. Leave blank to use the "
-        "built-in default. Some sites only serve a browser-like UA.",
+        "key": "embed_cover",
+        "section": "Output",
+        "label": "Embed book cover",
+        "type": "checkbox",
+        "help": "Download the novel's cover from the source and embed it in the EPUB.",
     },
+    # --- Discovery ---
     {
         "key": "search_sites",
-        "label": "Sites to search (Discover)",
+        "section": "Discovery",
+        "label": "Sites to search",
         "type": "multiselect",
         "options": searchable_names(),
-        "help": "Which sites the Discover search queries. More sites appear here as adapters "
-        "are added in later phases.",
+        "help": "Which sites the Discover search queries. More appear here as site adapters "
+        "are added.",
     },
 ]
 

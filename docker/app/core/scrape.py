@@ -121,7 +121,6 @@ async def scrape_bodies(
         if limit is not None:
             pending = pending[:limit]
 
-        strip_notes = settings_store.get_all(s).get("strip_translator_notes") == "true"
         fetcher = _fetcher_from_settings(s)
         fetched = errors = 0
         try:

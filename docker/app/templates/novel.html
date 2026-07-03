@@ -50,20 +50,27 @@
     <small class="muted" data-msg>Starting…</small>
   </div>
   {% else %}
-  <div style="margin-top:.6rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
-    <span class="muted">Downloaded {{ row.done }}/{{ row.total }}</span>
-    <span class="badge {{ row.v.status }}">{{ row.v.status }}</span>
-    {% if row.v.note %}<small class="muted">{{ row.v.note }}</small>{% endif %}
-    <span style="flex:1"></span>
-    {% if row.v.epub_path %}<small>📗 {{ row.v.epub_path.split('/')[-1] }}</small>{% endif %}
-    {% if row.v.pdf_path %}<small>📕 {{ row.v.pdf_path.split('/')[-1] }}</small>{% endif %}
-    <form method="post" action="/volumes/{{ row.v.id }}/build" style="margin:0">
-      <button type="submit">{% if row.v.epub_path or row.v.pdf_path %}Rebuild{% else %}Build{% endif %}</button>
-    </form>
-    <form method="post" action="/volumes/{{ row.v.id }}/delete" style="margin:0"
-          onsubmit="return confirm('Delete this book? (does not delete already-built files)')">
-      <button type="submit" class="ghost">Delete</button>
-    </form>
+  <div style="margin-top:.6rem">
+    <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+      <span class="muted">Downloaded {{ row.done }}/{{ row.total }}</span>
+      <span class="badge {{ row.v.status }}">{{ row.v.status }}</span>
+      {% if row.v.note %}<small class="muted">{{ row.v.note }}</small>{% endif %}
+    </div>
+    {% if row.v.epub_path or row.v.pdf_path %}
+    <div style="margin-top:.45rem">
+      {% if row.v.epub_path %}<div><small>📗 {{ row.v.epub_path.split('/')[-1] }}</small></div>{% endif %}
+      {% if row.v.pdf_path %}<div><small>📕 {{ row.v.pdf_path.split('/')[-1] }}</small></div>{% endif %}
+    </div>
+    {% endif %}
+    <div style="margin-top:.55rem;display:flex;gap:.5rem">
+      <form method="post" action="/volumes/{{ row.v.id }}/build" style="margin:0">
+        <button type="submit">{% if row.v.epub_path or row.v.pdf_path %}Rebuild{% else %}Build{% endif %}</button>
+      </form>
+      <form method="post" action="/volumes/{{ row.v.id }}/delete" style="margin:0"
+            onsubmit="return confirm('Delete this book? (does not delete already-built files)')">
+        <button type="submit" class="ghost">Delete</button>
+      </form>
+    </div>
   </div>
   {% endif %}
 </div>

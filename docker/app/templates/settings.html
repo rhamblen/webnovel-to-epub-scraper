@@ -2,12 +2,19 @@
 {% block title %}Settings — Webnovel to EPUB Scraper{% endblock %}
 {% block content %}
 <h1>Settings</h1>
-<p class="muted">Where books are stored and how politely the scraper behaves.</p>
+<p class="muted">How the scraper behaves and what gets built. (Output location is set by the
+  Docker volume mapping, not here.)</p>
 
 {% if saved %}<div class="notice ok">Settings saved.</div>{% endif %}
 
 <form method="post" action="/settings" class="card">
+  {% set ns = namespace(section='') %}
   {% for f in fields %}
+  {% if f.section and f.section != ns.section %}
+    {% if not loop.first %}<hr style="border:0;border-top:1px solid var(--border);margin:1.25rem 0">{% endif %}
+    <h3 style="margin:0 0 .75rem">{{ f.section }}</h3>
+    {% set ns.section = f.section %}
+  {% endif %}
   <div class="field">
     <label for="{{ f.key }}">{{ f.label }}</label>
     {% if f.type == "checkbox" %}

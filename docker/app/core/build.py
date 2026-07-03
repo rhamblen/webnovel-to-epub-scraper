@@ -100,7 +100,7 @@ async def build_volume(engine, volume_id: int) -> dict:
         cfg = settings_store.get_all(s)
         output_dir = str(config.output_dir)  # fixed /output (mapped to the share by compose)
         cover = None
-        if cfg.get("cover_style", "simple") != "none":
+        if cfg.get("embed_cover", "true") == "true":
             cover = await _fetch_cover(s, book.cover_path)
 
         want_epub = cfg.get("format_epub", "true") == "true"
