@@ -43,7 +43,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 
 ## Installation
 
-Deployed on Unraid via the **Compose Manager** plugin (full steps land in INSTALLATION.md at first release). In short: copy the stack to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`, map a `/config` volume and your books share to `/output`, then **Compose Manager → Compose Up**. Open the UI and set your output path on the **Settings** page.
+Deployed on Unraid via the **Compose Manager** plugin (full steps land in INSTALLATION.md at first release). The entire deployable unit is the repo's **[`docker/`](docker/)** folder (Dockerfile, `docker-compose.yml`, `requirements.txt`, and `app/`). In short: copy the contents of `docker/` to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/` (or clone the repo and point Compose Manager at `docker/docker-compose.yml`), then **Compose Manager → Compose Up**. The `/config` volume holds state; the `/output` mount (mapped to `/mnt/user/media/books/webnovels`) receives the finished files.
 
 ## How it works
 

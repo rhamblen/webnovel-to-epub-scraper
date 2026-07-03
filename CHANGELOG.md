@@ -21,6 +21,10 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
   `ALTER TABLE ADD COLUMN` — so schema upgrades no longer require wiping the database.
 
 ### Changed
+- **Moved the Docker build files + app into a self-contained `docker/` folder** (`Dockerfile`,
+  `docker-compose.yml`, `requirements.txt`, `.dockerignore`, `app/`). This is now the single
+  unit copied to the Unraid appdata stack, kept separate from the GitHub-facing README/docs/
+  LICENSE at repo root. No code changes — app-internal paths are relative.
 - Removed the editable **Output folder** setting. The output location is now fixed at
   `/output` inside the container and controlled solely by the docker-compose bind mount —
   simpler and avoids setting it to a host path that doesn't exist inside the container.

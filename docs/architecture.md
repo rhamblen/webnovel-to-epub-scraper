@@ -56,7 +56,7 @@ FastAPI app
 See [ADR 0005](decisions/0005-unraid-deploy-workflow.md) for the division of labour.
 
 - **Compose Manager stack.** Deployed via the Unraid **Compose Manager** plugin, not a Community Applications template (single container, but this keeps the workflow consistent with the user's other stacks).
-- **Source location.** Stack sources copied by the user to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`; deployed via **Compose Manager → Compose Up**.
+- **Source location.** The deployable unit is the repo's self-contained **`docker/`** folder (Dockerfile, compose, `requirements.txt`, `app/`). Its contents are copied by the user to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`; deployed via **Compose Manager → Compose Up**. Build context = `docker/`.
 - **Base image** includes Chromium for Playwright. Compose pins an explicit `image:` tag and a named network so image tags/network are stable regardless of the invoking project name (the folder-name-as-project-name footgun).
 - **Volumes:** `/config` (SQLite + settings + cache) and `/output` (mapped to your books share, e.g. `/mnt/user/books`).
 - **Port:** one HTTP port (default 8080) for the UI.

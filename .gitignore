@@ -16,7 +16,8 @@ venv/
 *.db
 
 # Local dev data (WN_DATA_DIR / WN_OUTPUT_DIR point here when running outside Docker)
-/.localdata/
+.localdata/
+.env
 
 # Output books (delivered to the file share, not the repo)
 /output/

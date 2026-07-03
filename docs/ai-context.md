@@ -28,7 +28,8 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
 
 - Deploys to **Unraid** (user has UR1 and UR2; Calibre + Kavita run on UR1).
 - Volumes: `/config` (state) and `/output` → **`/mnt/user/media/books/webnovels`** (UR1 has no dedicated books share; this is under the existing `media` share). HTTP port default 8080 (host 8577).
-- **Deploy = Unraid Compose Manager plugin.** Sources copied by the *user* to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`, then **Compose Up**. See [ADR 0005](decisions/0005-unraid-deploy-workflow.md).
+- **Repo layout:** the deployable unit is the repo's **`docker/`** folder (`Dockerfile`, `docker-compose.yml`, `requirements.txt`, `app/`). Docs/README/LICENSE stay at repo root. Build context = `docker/`.
+- **Deploy = Unraid Compose Manager plugin.** The *user* copies the contents of `docker/` to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/` (or clones + points Compose Manager at `docker/docker-compose.yml`), then **Compose Up**. See [ADR 0005](decisions/0005-unraid-deploy-workflow.md).
 - **Build division of labour:** Claude edits Docker source **locally only**; the user copies to appdata + deploys. Never emit raw `docker compose` CLI for the appdata folder (project-name footgun → wrong tags/network). End deploy-affecting changes with a **▶ YOUR TURN** block.
 - User is on Windows 11; shell is PowerShell (Bash tool also available). Repo not yet `git init`'d.
 
@@ -65,4 +66,4 @@ See the status tables in [README](../README.md#versions) and [project-plan](proj
 3. Fetch layer + first curated adapter (Phase 1).
 4. Assembler + EbookLib EPUB + share writer → first end-to-end build (Phase 2).
 
-After any deploy-affecting edit, hand off with a **▶ YOUR TURN** block: copy `webnovel-to-epub-scraper-docker/` to `/mnt/user/appdata/`, then Compose Manager → Compose Up; wait for "built/confirmed" before verifying.
+After any deploy-affecting edit, hand off with a **▶ YOUR TURN** block: update the stack (copy the repo's `docker/` contents to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`, or `git pull`), then Compose Manager → Compose Up; wait for "built/confirmed" before verifying.
