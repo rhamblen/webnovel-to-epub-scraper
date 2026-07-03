@@ -7,6 +7,10 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.4.2] — 2026-07-03
+
 ### Changed
 - **Tidied the Settings page.** Options are now grouped into **Scraping / Output / Discovery** with
   clearer help text. Removed three redundant settings that weren't wired to anything
