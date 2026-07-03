@@ -56,7 +56,8 @@ class FreeWebNovelAdapter(Adapter):
                 continue
             seen.add(slug)
 
-            row = a.find_parent(class_=re.compile(r"li-row|con|txt|row|item")) or a.parent
+            # The result container (.con) holds the title, cover img, and chapter-count link.
+            row = a.find_parent(class_="con") or a.find_parent(class_=re.compile(r"li-row|item")) or a.parent
             cover = None
             chapters = None
             if row is not None:

@@ -18,10 +18,16 @@
 <h2 style="margin-top:1.25rem">Results</h2>
 {% if results %}
 <table class="grid">
-  <thead><tr><th>Title</th><th>Source</th><th>Chapters</th><th></th></tr></thead>
+  <thead><tr><th></th><th>Title</th><th>Source</th><th>Chapters</th><th></th></tr></thead>
   <tbody>
   {% for r in results %}
     <tr>
+      <td>
+        {% if r.cover_url %}
+        <img src="/cover?src={{ r.cover_url | urlencode }}" alt="" loading="lazy"
+             style="width:40px;height:56px;object-fit:cover;border-radius:3px">
+        {% endif %}
+      </td>
       <td>{{ r.title }}</td>
       <td><small class="muted">{{ r.source }}</small></td>
       <td>{{ r.chapters if r.chapters is not none else '—' }}</td>

@@ -15,6 +15,11 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 - **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
 ### Added
+- **Book covers in the UI:** Discover search results now show a cover thumbnail, and the Novel
+  page shows the cover. Images are served through a `/cover` proxy restricted to hosts a curated
+  adapter recognizes (so it isn't an open proxy), which also avoids browser hotlink/referer issues.
+  The freewebnovel search parser was fixed to read the cover from the result's `.con` container.
+  (The cover was already downloaded at import and embedded in the EPUB; this makes it visible.)
 - **Edit/delete books + sequential ranges:** each book on the Novel page is now an editable card
   — correct its number/title/start/end and Save, or Delete it. The "Add a book" form defaults the
   **start chapter to one past the furthest existing book** (and the next book number), so books

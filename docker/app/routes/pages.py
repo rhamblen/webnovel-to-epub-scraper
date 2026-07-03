@@ -7,13 +7,16 @@ tasks for now — Phase 5 replaces them with a persistent job queue + live progr
 import asyncio
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from .. import settings_store
 from ..core import build, scrape
+from ..core.adapters import get_adapter
+from ..core.fetch import DEFAULT_UA
 from ..db import get_engine
 from ..models import Book, Chapter, Job, Volume
 
@@ -22,6 +25,37 @@ templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent
 
 # Volume ids currently building (in-memory; superseded by the Phase 5 job system).
 _building: set[int] = set()
+
+_img_client: httpx.AsyncClient | None = None
+
+
+def _image_client() -> httpx.AsyncClient:
+    global _img_client
+    if _img_client is None:
+        _img_client = httpx.AsyncClient(
+            headers={"User-Agent": DEFAULT_UA}, timeout=15, follow_redirects=True
+        )
+    return _img_client
+
+
+@router.get("/cover")
+async def cover_proxy(src: str = ""):
+    """Proxy a cover image so the browser doesn't hotlink the source (and to dodge
+    referer/hotlink checks). Restricted to hosts a curated adapter recognizes, so this
+    is not an open proxy."""
+    if not src or get_adapter(src) is None:
+        return Response(status_code=404)
+    try:
+        r = await _image_client().get(src)
+        if r.status_code != 200:
+            return Response(status_code=404)
+        return Response(
+            content=r.content,
+            media_type=r.headers.get("content-type", "image/jpeg"),
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    except Exception:
+        return Response(status_code=404)
 
 
 def _counts(s: Session, book_id: int, start: int | None = None, end: int | None = None):

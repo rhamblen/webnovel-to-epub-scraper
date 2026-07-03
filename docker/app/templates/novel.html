@@ -2,9 +2,17 @@
 {% block title %}{{ book.title }} — Webnovel to EPUB Scraper{% endblock %}
 {% block content %}
 <p class="muted"><a href="/library">← Library</a></p>
-<h1>{{ book.title }}</h1>
-<p class="muted">by {{ book.author }} · {{ done }}/{{ total }} chapters downloaded
-  · {{ max_ch }} chapters available</p>
+<div style="display:flex;gap:1rem;align-items:flex-start">
+  {% if book.cover_path %}
+  <img src="/cover?src={{ book.cover_path | urlencode }}" alt="cover" loading="lazy"
+       style="width:90px;height:126px;object-fit:cover;border-radius:5px;flex:none">
+  {% endif %}
+  <div>
+    <h1 style="margin-top:0">{{ book.title }}</h1>
+    <p class="muted">by {{ book.author }} · {{ done }}/{{ total }} chapters downloaded
+      · {{ max_ch }} chapters available</p>
+  </div>
+</div>
 
 {% if error %}<div class="notice err">{{ error }}</div>{% endif %}
 
