@@ -1,6 +1,6 @@
 # Phase 0 build log — Skeleton (v0.1.0)
 
-**Status:** ◐ code complete + locally verified; awaiting first Unraid deploy confirmation.
+**Status:** ☑ done — built and deployed on UR1 via Compose Manager; web UI confirmed serving.
 
 ## What was built
 
@@ -49,6 +49,6 @@ WN_DATA_DIR=./.localdata/config WN_OUTPUT_DIR=./.localdata/output \
 # open http://127.0.0.1:8577
 ```
 
-## Remaining to close the phase
+## Deploy confirmation
 
-- Deploy on UR1 via Compose Manager and confirm the container serves the UI and persists settings across a container restart (the real exit criterion on the target host).
+- Built + started on UR1 via Compose Manager → Compose Up; web UI confirmed reachable and serving. Phase 0 closed ☑.
