@@ -11,9 +11,13 @@
     <h1 style="margin-top:0">{{ book.title }}</h1>
     <p class="muted">by {{ book.author }} · {{ done }}/{{ total }} chapters downloaded
       · {{ max_ch }} chapters available</p>
+    <form method="post" action="/novels/{{ book.id }}/rescan" style="margin:0">
+      <button type="submit" class="ghost">↻ Rescan for new chapters</button>
+    </form>
   </div>
 </div>
 
+{% if msg %}<div class="notice ok">{{ msg }}</div>{% endif %}
 {% if error %}<div class="notice err">{{ error }}</div>{% endif %}
 
 <h2>Books</h2>

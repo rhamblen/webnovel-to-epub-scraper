@@ -6,6 +6,7 @@ tasks for now — Phase 5 replaces them with a persistent job queue + live progr
 """
 import asyncio
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, Request
@@ -118,7 +119,7 @@ def library(request: Request):
 
 
 @router.get("/novels/{book_id}")
-def novel_detail(request: Request, book_id: int, error: str | None = None):
+def novel_detail(request: Request, book_id: int, error: str | None = None, msg: str | None = None):
     with Session(get_engine()) as s:
         book = s.get(Book, book_id)
         if book is None:
@@ -143,9 +144,36 @@ def novel_detail(request: Request, book_id: int, error: str | None = None):
     return templates.TemplateResponse(
         request, "novel.html",
         {"active": "library", "book": book, "total": total, "done": done,
-         "max_ch": max_ch, "vols": vols, "error": error,
+         "max_ch": max_ch, "vols": vols, "error": error, "msg": msg,
          "next_number": next_number, "next_start": next_start},
     )
+
+
+@router.post("/novels/{book_id}/rescan")
+async def rescan_novel(book_id: int):
+    """Re-read the source novel page and add any newly-published chapters (idempotent)."""
+    with Session(get_engine()) as s:
+        book = s.get(Book, book_id)
+        if book is None:
+            return RedirectResponse(url="/library", status_code=303)
+        toc_url = book.toc_url
+        before = len(s.exec(select(Chapter.id).where(Chapter.book_id == book_id)).all())
+    try:
+        await scrape.import_novel(get_engine(), toc_url)
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/novels/{book_id}?error={quote(f'Rescan failed: {type(e).__name__}: {e}')}",
+            status_code=303,
+        )
+    with Session(get_engine()) as s:
+        after = len(s.exec(select(Chapter.id).where(Chapter.book_id == book_id)).all())
+    delta = after - before
+    msg = (
+        f"Rescan complete — {delta} new chapter(s) found ({after} total). "
+        "Extend a book's end (or add a new book) to include them."
+        if delta else f"Rescan complete — no new chapters ({after} total)."
+    )
+    return RedirectResponse(url=f"/novels/{book_id}?msg={quote(msg)}", status_code=303)
 
 
 def _parse_volume_fields(form) -> tuple[int, str, int, int]:

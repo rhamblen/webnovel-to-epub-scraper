@@ -7,7 +7,16 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Rescan for new chapters:** a button on the Novel page re-reads the source novel page and adds
+  any newly-published chapters (idempotent — existing downloaded chapters are untouched), reporting
+  how many were found. Then extend a book's end (or add a new book) to include them.
+  Route `POST /novels/{id}/rescan`.
+
+### Changed
+- **EPUB opens on its cover.** The cover page is now first in the reading order (spine), in addition
+  to the `<meta name="cover">` + EPUB3 `cover-image` metadata that already drives the Kindle library
+  thumbnail — so the book both shows a cover in the library and opens on it.
 
 ## [0.4.0] — 2026-07-03
 

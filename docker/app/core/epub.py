@@ -49,10 +49,14 @@ def build_epub(
                 {"name": "calibre:series_index", "content": str(series_index)},
             )
 
+    has_cover = False
     if cover:
         fname, data = cover
         try:
-            book.set_cover(fname, data)
+            # create_page=True adds a cover XHTML page (id "cover"); the OPF also gets the
+            # <meta name="cover"> pointer + EPUB3 cover-image property Kindle uses.
+            book.set_cover(fname, data, create_page=True)
+            has_cover = True
         except Exception:
             pass  # a bad cover shouldn't fail the whole build
 
@@ -70,7 +74,8 @@ def build_epub(
     book.toc = tuple(items)
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
-    book.spine = ["nav", *items]
+    # Put the cover page first in reading order so it opens on the cover, then nav, then chapters.
+    book.spine = (["cover"] if has_cover else []) + ["nav", *items]
 
     epub.write_epub(dest_path, book)
     return dest_path
