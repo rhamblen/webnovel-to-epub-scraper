@@ -10,7 +10,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 0 — Skeleton        | v0.1.0 | ☑ | Container + web UI shell + settings + SQLite |
 | 1 — Scraper core    | v0.2.0 | ☑ | Fetch layer + first curated adapter (freewebnovel) |
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
-| 3 — Discovery       | v0.4.0 | ◐ | Search by title across a configurable site list (freewebnovel first) |
+| 3 — Discovery       | v0.4.0 | ☑ | Search by title across a configurable site list (freewebnovel first) |
 | 4 — Coverage        | v0.5.0 | ☐ | Generic fallback + JS sites + more adapters |
 | 5 — Library & jobs  | v0.6.0 | ☐ | Library mgmt, live progress, incremental updates |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
