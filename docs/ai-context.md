@@ -44,6 +44,10 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
 
 ## Gotchas / watch-list
 
+- **Schema changes:** `create_all` never alters existing tables. Adding a column to a model
+  is handled at startup by `db._ensure_columns` (additive `ALTER TABLE ADD COLUMN`, nullable
+  only). Renaming/removing columns or changing types still needs a manual migration or a DB reset.
+
 - **Site drift** breaks curated adapters — keep saved-HTML fixtures + a self-test harness (Phase 4).
 - **Playwright** inflates image size and RAM; launch it only when an adapter sets `needs_render`.
 - **Filename safety** on the share — sanitize `Author - Title.epub`, write atomically (temp + rename).

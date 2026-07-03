@@ -14,6 +14,12 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 - **Phase 1 scraper core (v0.2.0, code complete):** polite async fetch layer (`app/core/fetch.py` — per-host rate limit, concurrency, retries/backoff, robots.txt, configurable User-Agent), adapter interface + registry, first curated adapter for **freewebnovel** (auto-routes the Cloudflare-walled `.com` to the `.vip` mirror; extracts title/author/cover and enumerates all chapters; cleans chapter bodies to `<p>` XHTML), idempotent `import_novel`/`scrape_bodies` orchestration, and a browser flow (Discover "add by URL" → Library with download button + progress counts). Verified against the live site (213-chapter novel). See [docs/phases/phase-1-scraper-core.md](docs/phases/phase-1-scraper-core.md).
 - **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
+### Fixed
+- **`no such column: volume.pdf_path` on startup/queries** after upgrading a DB that already
+  had the `volume` table. Added a lightweight additive migration (`db._ensure_columns`) that
+  runs after `create_all` and adds any model columns missing from existing tables via
+  `ALTER TABLE ADD COLUMN` — so schema upgrades no longer require wiping the database.
+
 ### Changed
 - Removed the editable **Output folder** setting. The output location is now fixed at
   `/output` inside the container and controlled solely by the docker-compose bind mount —
