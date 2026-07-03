@@ -5,13 +5,11 @@ one-line change here plus a default in ``_defaults()``.
 """
 from sqlmodel import Session, select
 
-from .config import config
 from .models import Setting
 
 
 def _defaults() -> dict[str, str]:
     return {
-        "output_dir": str(config.output_dir),
         "concurrency": "2",
         "request_delay_seconds": "1.0",
         "default_language": "en",
@@ -25,15 +23,9 @@ def _defaults() -> dict[str, str]:
 
 
 # UI descriptors for the Settings page (data-driven form).
+# Note: the output location is intentionally NOT a setting — it's fixed at /output inside
+# the container and mapped to a host path by docker-compose (see config.output_dir).
 FIELDS = [
-    {
-        "key": "output_dir",
-        "label": "Output folder",
-        "type": "text",
-        "help": "Where finished files are written, as seen INSIDE the container. Leave this "
-        "as /output — docker-compose maps /output to your UR1 share "
-        "(/mnt/user/media/books/webnovels). Do not put the UR1 path here.",
-    },
     {
         "key": "concurrency",
         "label": "Max concurrent requests",

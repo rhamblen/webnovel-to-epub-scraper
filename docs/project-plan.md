@@ -52,7 +52,8 @@ Legend: ☐ not started · ◐ in progress · ☑ done
   - FastAPI app, Uvicorn entrypoint, health endpoint.
   - Jinja2 + HTMX layout with nav: **Discover · Library · Jobs · Settings** (stubs).
   - SQLite schema + migrations for `settings`, `book`, `chapter`, `job`.
-  - Settings page that reads/writes: output path, web port, concurrency, per-request delay, default language, cover style.
+  - Settings page that reads/writes: concurrency, per-request delay, defaults, cover style,
+    output formats (the output *location* is fixed at `/output` and mapped by compose, not a setting).
   - Dockerfile (Playwright-capable base), `docker-compose.yml` with explicit `image:` pin + named network (Compose-Manager-safe), `/config` + `/output` volumes.
 - **Prerequisites:** none (greenfield).
 - **Deliverables:** image builds and runs; Settings persist across restart; `/healthz` green.

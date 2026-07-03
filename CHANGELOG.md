@@ -14,6 +14,11 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 - **Phase 1 scraper core (v0.2.0, code complete):** polite async fetch layer (`app/core/fetch.py` — per-host rate limit, concurrency, retries/backoff, robots.txt, configurable User-Agent), adapter interface + registry, first curated adapter for **freewebnovel** (auto-routes the Cloudflare-walled `.com` to the `.vip` mirror; extracts title/author/cover and enumerates all chapters; cleans chapter bodies to `<p>` XHTML), idempotent `import_novel`/`scrape_bodies` orchestration, and a browser flow (Discover "add by URL" → Library with download button + progress counts). Verified against the live site (213-chapter novel). See [docs/phases/phase-1-scraper-core.md](docs/phases/phase-1-scraper-core.md).
 - **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
+### Changed
+- Removed the editable **Output folder** setting. The output location is now fixed at
+  `/output` inside the container and controlled solely by the docker-compose bind mount —
+  simpler and avoids setting it to a host path that doesn't exist inside the container.
+
 ### Notes
 - Planning stage only — no application code yet. All phases are ☐ not started.
 - Direction locked: Python/FastAPI + Jinja2/HTMX, SQLite, in-process worker; EPUB output written to an Unraid file share; curated adapters + generic fallback scraper.

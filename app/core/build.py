@@ -14,6 +14,7 @@ from pathlib import Path
 from sqlmodel import Session, select
 
 from .. import settings_store
+from ..config import config
 from ..models import Book, Chapter, Volume
 from . import scrape
 from .epub import ChapterDoc, build_epub
@@ -80,7 +81,7 @@ async def build_volume(engine, volume_id: int) -> dict:
             return {"status": "error", "note": vol.note}
 
         cfg = settings_store.get_all(s)
-        output_dir = cfg.get("output_dir") or "/output"
+        output_dir = str(config.output_dir)  # fixed /output (mapped to the share by compose)
         cover = None
         if cfg.get("cover_style", "simple") != "none":
             cover = await _fetch_cover(s, book.cover_path)
