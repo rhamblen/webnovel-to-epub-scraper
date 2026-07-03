@@ -1,10 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Discover — Webnovel to EPUB Scraper{% endblock %}
 {% block content %}
-<h1>Discover</h1>
-<p class="muted">Search for a novel and get a recommended source to scrape from.</p>
-<div class="card placeholder">
-  <p><strong>Coming in Phase 3.</strong> This page will let you search by title, pick the
-  novel, and jump straight to a build with the best available source pre-filled.</p>
+<h1>Add a novel</h1>
+<p class="muted">Paste a novel's page URL from a supported site. Currently supported:
+  <strong>freewebnovel</strong> (.com URLs are auto-routed to a working mirror).</p>
+
+{% if error %}<div class="notice err">{{ error }}</div>{% endif %}
+
+<form method="post" action="/novels" class="card">
+  <div class="field">
+    <label for="url">Novel URL</label>
+    <input type="text" id="url" name="url" placeholder="https://freewebnovel.com/novel/…"
+           value="{{ url or '' }}">
+    <small>The novel's main/table-of-contents page — not an individual chapter.</small>
+  </div>
+  <div class="actions"><button type="submit">Import novel</button></div>
+</form>
+
+<div class="card placeholder" style="margin-top:1rem">
+  <p><strong>Discovery search</strong> (search by title + recommended source) arrives in Phase 3.</p>
 </div>
 {% endblock %}

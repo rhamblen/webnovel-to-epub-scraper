@@ -24,7 +24,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 | Version | Status | Features |
 |---------|--------|----------|
 | v0.1.0  | ☑ done | App skeleton: container, web UI shell, settings, SQLite, health check |
-| v0.2.0  | ☐ planned | Scraper core + first curated adapter (TOC + chapter extraction) |
+| v0.2.0  | ◐ in progress | Scraper core + first curated adapter (freewebnovel): import + download chapters |
 | v0.3.0  | ☐ planned | Assembler + EPUB output written to file share — end-to-end MVP |
 | v0.4.0  | ☐ planned | Discovery: search by title, recommend best source site |
 | v0.5.0  | ☐ planned | Generic fallback scraper, JS-rendered sites, more adapters |

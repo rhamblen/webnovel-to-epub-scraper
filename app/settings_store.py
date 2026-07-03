@@ -18,6 +18,7 @@ def _defaults() -> dict[str, str]:
         "default_author": "Unknown",
         "strip_translator_notes": "false",
         "cover_style": "simple",
+        "user_agent": "",
     }
 
 
@@ -68,6 +69,13 @@ FIELDS = [
         "type": "select",
         "options": ["simple", "none"],
         "help": "Placeholder cover generated when the source has no cover image.",
+    },
+    {
+        "key": "user_agent",
+        "label": "User-Agent (optional)",
+        "type": "text",
+        "help": "Override the HTTP User-Agent sent to sites. Leave blank to use the "
+        "built-in default. Some sites only serve a browser-like UA.",
     },
 ]
 

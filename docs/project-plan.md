@@ -8,7 +8,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | Phase | Version | Status | One-line |
 |-------|---------|--------|----------|
 | 0 — Skeleton        | v0.1.0 | ☑ | Container + web UI shell + settings + SQLite |
-| 1 — Scraper core    | v0.2.0 | ☐ | Fetch layer + first curated adapter |
+| 1 — Scraper core    | v0.2.0 | ◐ | Fetch layer + first curated adapter (freewebnovel) |
 | 2 — EPUB MVP        | v0.3.0 | ☐ | Assemble + build EPUB + write to share (end-to-end) |
 | 3 — Discovery       | v0.4.0 | ☐ | Search by title, recommend best source |
 | 4 — Coverage        | v0.5.0 | ☐ | Generic fallback + JS sites + more adapters |
