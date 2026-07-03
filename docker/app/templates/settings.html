@@ -19,6 +19,15 @@
         <option value="{{ opt }}" {% if values[f.key] == opt %}selected{% endif %}>{{ opt }}</option>
         {% endfor %}
       </select>
+    {% elif f.type == "multiselect" %}
+      {% set selected = (values[f.key] or "").split(",") %}
+      {% for opt in f.options %}
+      <label style="font-weight:normal;display:inline-flex;align-items:center;gap:.35rem;margin-right:1rem">
+        <input type="checkbox" name="{{ f.key }}" value="{{ opt }}"
+               {% if opt in selected %}checked{% endif %}> {{ opt }}
+      </label>
+      {% endfor %}
+      {% if not f.options %}<small class="muted">No searchable sites available.</small>{% endif %}
     {% else %}
       <input type="{{ f.type }}" id="{{ f.key }}" name="{{ f.key }}"
              value="{{ values[f.key] }}" {% if f.step %}step="{{ f.step }}"{% endif %}>

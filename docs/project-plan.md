@@ -10,7 +10,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 0 — Skeleton        | v0.1.0 | ☑ | Container + web UI shell + settings + SQLite |
 | 1 — Scraper core    | v0.2.0 | ☑ | Fetch layer + first curated adapter (freewebnovel) |
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
-| 3 — Discovery       | v0.4.0 | ☐ | Search by title, recommend best source |
+| 3 — Discovery       | v0.4.0 | ◐ | Search by title across a configurable site list (freewebnovel first) |
 | 4 — Coverage        | v0.5.0 | ☐ | Generic fallback + JS sites + more adapters |
 | 5 — Library & jobs  | v0.6.0 | ☐ | Library mgmt, live progress, incremental updates |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
@@ -103,15 +103,21 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 
 ## Phase 3 — Discovery · v0.4.0
 
-- **Objective:** find a novel by title and **recommend where to scrape it from**.
+- **Objective:** find a novel by title from within the app instead of hunting for URLs.
+- **Scope (this iteration):** search the **freewebnovel** site only, with the searchable sites
+  configured as a **list in Settings** (`search_sites`) so more can be added later.
 - **What we build:**
-  - Search: query a metadata/index source, return candidate titles with author/cover/synopsis.
-  - Source ranking: for a chosen novel, list known hosting sites and recommend the best by adapter support, completeness, and update recency.
-  - "Add to library from search result" → pre-fills the build form with the recommended source.
+  - `Adapter.search(query)` capability (+ `searchable` flag); freewebnovel implements it via its
+    POST `/search` endpoint, returning title / chapter count / novel URL.
+  - `search_sites` multi-select setting (auto-populated from adapters that are searchable).
+  - Discover page: a search box → results table with one-click **Import** (reuses the existing
+    import-by-URL flow) → Novel detail, where books are defined and built.
+- **Deferred to a later phase (needs >1 site):** cross-site source **ranking/recommendation**
+  (best source by completeness/recency) and richer metadata (author/cover/synopsis in results).
 - **Prerequisites:** Phases 0–2.
-- **Deliverables:** type a title → pick the novel → get a recommended source → one click to build.
-- **Why:** removes the need for the user to hunt for a good source URL manually — a core requested feature.
-- **Exit criteria:** search a known novel → recommended source produces a successful build.
+- **Deliverables:** type a title → see results → one click imports the novel ready to build.
+- **Why:** removes the need to hand-paste source URLs — a core requested feature.
+- **Exit criteria:** search a known title → import a result → build a book from it.
 
 ## Phase 4 — Coverage · v0.5.0
 

@@ -5,6 +5,7 @@ one-line change here plus a default in ``_defaults()``.
 """
 from sqlmodel import Session, select
 
+from .core.adapters import searchable_names
 from .models import Setting
 
 
@@ -20,6 +21,8 @@ def _defaults() -> dict[str, str]:
         "format_epub": "true",
         "format_pdf": "true",
         "pdf_page_size": "A5",
+        # Comma-separated list of adapter names the Discover search queries.
+        "search_sites": "freewebnovel",
     }
 
 
@@ -93,9 +96,24 @@ FIELDS = [
         "help": "Override the HTTP User-Agent sent to sites. Leave blank to use the "
         "built-in default. Some sites only serve a browser-like UA.",
     },
+    {
+        "key": "search_sites",
+        "label": "Sites to search (Discover)",
+        "type": "multiselect",
+        "options": searchable_names(),
+        "help": "Which sites the Discover search queries. More sites appear here as adapters "
+        "are added in later phases.",
+    },
 ]
 
 CHECKBOX_KEYS = {f["key"] for f in FIELDS if f["type"] == "checkbox"}
+MULTISELECT_KEYS = {f["key"] for f in FIELDS if f["type"] == "multiselect"}
+
+
+def get_search_sites(session: Session) -> list[str]:
+    raw = get_all(session).get("search_sites", "")
+    sites = [s.strip() for s in raw.split(",") if s.strip()]
+    return sites or searchable_names()
 
 
 def seed_defaults(session: Session) -> None:

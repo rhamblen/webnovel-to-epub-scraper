@@ -13,7 +13,8 @@ from sqlmodel import Session, select
 
 from .. import settings_store
 from ..models import Book, Chapter
-from .adapters import get_adapter
+from .adapters import get_adapter, get_adapter_by_name
+from .adapters.base import SearchResult
 from .fetch import DEFAULT_UA, Fetcher
 
 
@@ -28,6 +29,26 @@ def _fetcher_from_settings(s: Session) -> Fetcher:
         delay=float(cfg.get("request_delay_seconds", "1.0") or 1.0),
         concurrency=int(cfg.get("concurrency", "2") or 2),
     )
+
+
+async def search_novels(engine, query: str) -> list[SearchResult]:
+    """Search the sites enabled in settings and return aggregated results."""
+    with Session(engine) as s:
+        sites = settings_store.get_search_sites(s)
+        fetcher = _fetcher_from_settings(s)
+    results: list[SearchResult] = []
+    try:
+        for name in sites:
+            adapter = get_adapter_by_name(name)
+            if adapter is None or not getattr(adapter, "searchable", False):
+                continue
+            try:
+                results += await adapter.search(fetcher, query)
+            except Exception:
+                pass  # one site failing shouldn't sink the whole search
+    finally:
+        await fetcher.aclose()
+    return results
 
 
 async def import_novel(engine, url: str) -> int:

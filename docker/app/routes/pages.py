@@ -41,8 +41,18 @@ def index():
 
 
 @router.get("/discover")
-def discover(request: Request, error: str | None = None):
-    return templates.TemplateResponse(request, "discover.html", {"active": "discover", "error": error})
+async def discover(request: Request, q: str = "", error: str | None = None):
+    results = []
+    searched = bool(q.strip())
+    if searched:
+        try:
+            results = await scrape.search_novels(get_engine(), q.strip())
+        except Exception as e:
+            error = f"{type(e).__name__}: {e}"
+    return templates.TemplateResponse(
+        request, "discover.html",
+        {"active": "discover", "q": q, "results": results, "searched": searched, "error": error},
+    )
 
 
 @router.post("/novels")
@@ -153,6 +163,8 @@ async def settings_post(request: Request):
         key = field["key"]
         if key in settings_store.CHECKBOX_KEYS:
             updates[key] = "true" if form.get(key) is not None else "false"
+        elif key in settings_store.MULTISELECT_KEYS:
+            updates[key] = ",".join(form.getlist(key))
         else:
             updates[key] = str(form.get(key, "")).strip()
     with Session(get_engine()) as s:

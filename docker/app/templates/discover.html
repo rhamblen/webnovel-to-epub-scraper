@@ -1,23 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Discover — Webnovel to EPUB Scraper{% endblock %}
 {% block content %}
-<h1>Add a novel</h1>
-<p class="muted">Paste a novel's page URL from a supported site. Currently supported:
-  <strong>freewebnovel</strong> (.com URLs are auto-routed to a working mirror).</p>
+<h1>Discover</h1>
+<p class="muted">Search the sites configured in <a href="/settings">Settings</a>, or paste a URL below.</p>
 
 {% if error %}<div class="notice err">{{ error }}</div>{% endif %}
 
+<form method="get" action="/discover" class="card">
+  <div class="field">
+    <label for="q">Search by title</label>
+    <input type="text" id="q" name="q" placeholder="e.g. shadow slave" value="{{ q or '' }}" autofocus>
+  </div>
+  <div class="actions"><button type="submit">Search</button></div>
+</form>
+
+{% if searched %}
+<h2 style="margin-top:1.25rem">Results</h2>
+{% if results %}
+<table class="grid">
+  <thead><tr><th>Title</th><th>Source</th><th>Chapters</th><th></th></tr></thead>
+  <tbody>
+  {% for r in results %}
+    <tr>
+      <td>{{ r.title }}</td>
+      <td><small class="muted">{{ r.source }}</small></td>
+      <td>{{ r.chapters if r.chapters is not none else '—' }}</td>
+      <td>
+        <form method="post" action="/novels" style="margin:0">
+          <input type="hidden" name="url" value="{{ r.url }}">
+          <button type="submit">Import</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="card placeholder"><p>No results for “{{ q }}”.</p></div>
+{% endif %}
+{% endif %}
+
+<h2 style="margin-top:1.5rem">Or add by URL</h2>
 <form method="post" action="/novels" class="card">
   <div class="field">
     <label for="url">Novel URL</label>
-    <input type="text" id="url" name="url" placeholder="https://freewebnovel.com/novel/…"
-           value="{{ url or '' }}">
+    <input type="text" id="url" name="url" placeholder="https://freewebnovel.com/novel/…">
     <small>The novel's main/table-of-contents page — not an individual chapter.</small>
   </div>
   <div class="actions"><button type="submit">Import novel</button></div>
 </form>
-
-<div class="card placeholder" style="margin-top:1rem">
-  <p><strong>Discovery search</strong> (search by title + recommended source) arrives in Phase 3.</p>
-</div>
 {% endblock %}

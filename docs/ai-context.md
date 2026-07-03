@@ -39,8 +39,9 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
 
 ## Core interfaces (target)
 
-- Adapter: `list_chapters(toc_url) -> [ChapterRef]`, `extract_chapter(url) -> ChapterContent`, plus a `needs_render` flag.
-- Fetch layer owns rate limiting / robots / retries so adapters stay thin.
+- Adapter: `fetch_novel(url)` and `fetch_chapter(ref)`, optional `search(query)` (gated by a `searchable` flag), plus a `needs_render` flag. Registry: `get_adapter(url)`, `get_adapter_by_name(name)`, `searchable_names()`.
+- Discover search: `scrape.search_novels(query)` fans out over the sites in the `search_sites` setting.
+- Fetch layer owns rate limiting / robots / retries (GET + POST) so adapters stay thin.
 - EPUB builder: EbookLib — metadata, cover, navigable TOC, one XHTML per chapter.
 
 ## Gotchas / watch-list

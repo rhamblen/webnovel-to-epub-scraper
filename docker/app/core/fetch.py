@@ -83,6 +83,12 @@ class Fetcher:
         return True if rp is None else rp.can_fetch(self._ua, url)
 
     async def get(self, url: str) -> httpx.Response:
+        return await self._request("GET", url)
+
+    async def post(self, url: str, data: dict | None = None) -> httpx.Response:
+        return await self._request("POST", url, data=data)
+
+    async def _request(self, method: str, url: str, data: dict | None = None) -> httpx.Response:
         host = self._host(url)
         if not await self.allowed(url):
             raise PermissionError(f"Blocked by robots.txt: {url}")
@@ -91,7 +97,10 @@ class Fetcher:
             for attempt in range(self.retries + 1):
                 await self._pace(host)
                 try:
-                    r = await self._client.get(url)
+                    if method == "POST":
+                        r = await self._client.post(url, data=data)
+                    else:
+                        r = await self._client.get(url)
                     if r.status_code in (429, 500, 502, 503, 504):
                         raise httpx.HTTPStatusError(
                             f"retryable {r.status_code}", request=r.request, response=r

@@ -41,9 +41,20 @@ class NovelResult:
     chapters: list[ChapterRef] = field(default_factory=list)
 
 
+@dataclass
+class SearchResult:
+    title: str
+    url: str  # the novel page URL to import
+    source: str  # adapter name that produced it
+    cover_url: str | None = None
+    chapters: int | None = None
+    author: str = ""
+
+
 class Adapter(ABC):
     name: str = "base"
     needs_render: bool = False  # True if the site requires a real browser (Playwright)
+    searchable: bool = False  # True if the adapter implements search()
 
     @classmethod
     @abstractmethod
@@ -57,3 +68,7 @@ class Adapter(ABC):
     @abstractmethod
     async def fetch_chapter(self, fetcher: Fetcher, ref: ChapterRef) -> ChapterContent:
         ...
+
+    async def search(self, fetcher: Fetcher, query: str) -> list[SearchResult]:
+        """Search the site by title. Override in adapters that set ``searchable = True``."""
+        raise NotImplementedError

@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from ..clean import clean_chapter_html
 from ..fetch import Fetcher
-from .base import Adapter, ChapterContent, ChapterRef, NovelMeta, NovelResult
+from .base import Adapter, ChapterContent, ChapterRef, NovelMeta, NovelResult, SearchResult
 
 HOST = "https://freewebnovel.vip"
 _HOST_RE = re.compile(r"(^|\.)freewebnovel\.", re.I)
@@ -32,10 +32,52 @@ _CHAP_RE = re.compile(r"/chapter-(\d+)\b")
 class FreeWebNovelAdapter(Adapter):
     name = "freewebnovel"
     needs_render = False
+    searchable = True
 
     @classmethod
     def matches(cls, url: str) -> bool:
         return bool(_HOST_RE.search(urlparse(url).netloc))
+
+    async def search(self, fetcher: Fetcher, query: str) -> list[SearchResult]:
+        """POST /search (form: searchkey) and parse the result rows."""
+        resp = await fetcher.post(f"{HOST}/search", data={"searchkey": query})
+        soup = BeautifulSoup(resp.text, "html.parser")
+        results: list[SearchResult] = []
+        seen: set[str] = set()
+        for a in soup.select('a[href^="/freenovel/"]'):
+            href = a.get("href", "")
+            if "/chapter-" in href:
+                continue
+            title = a.get_text(strip=True)
+            if not title:
+                continue
+            slug = href.split("/freenovel/")[-1].strip("/")
+            if not slug or slug in seen:
+                continue
+            seen.add(slug)
+
+            row = a.find_parent(class_=re.compile(r"li-row|con|txt|row|item")) or a.parent
+            cover = None
+            chapters = None
+            if row is not None:
+                img = row.select_one("img")
+                if img is not None:
+                    src = img.get("src") or img.get("data-src")
+                    cover = urljoin(HOST, src) if src else None
+                chap_link = row.select_one('a[href*="/chapter-"]')
+                if chap_link is not None:
+                    m = re.search(r"(\d+)\s*Chapters", chap_link.get_text())
+                    chapters = int(m.group(1)) if m else None
+
+            results.append(
+                SearchResult(
+                    title=title, url=urljoin(HOST, href), source=self.name,
+                    cover_url=cover, chapters=chapters,
+                )
+            )
+            if len(results) >= 25:
+                break
+        return results
 
     def _slug(self, url: str) -> str:
         m = _SLUG_RE.search(urlparse(url).path)

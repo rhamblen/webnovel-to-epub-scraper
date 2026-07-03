@@ -14,6 +14,14 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 - **Phase 1 scraper core (v0.2.0, done — confirmed on UR1):** polite async fetch layer (`app/core/fetch.py` — per-host rate limit, concurrency, retries/backoff, robots.txt, configurable User-Agent), adapter interface + registry, first curated adapter for **freewebnovel** (auto-routes the Cloudflare-walled `.com` to the `.vip` mirror; extracts title/author/cover and enumerates all chapters; cleans chapter bodies to `<p>` XHTML), idempotent `import_novel`/`scrape_bodies` orchestration, and a browser flow (Discover "add by URL" → Library with download button + progress counts). Verified against the live site (213-chapter novel). See [docs/phases/phase-1-scraper-core.md](docs/phases/phase-1-scraper-core.md).
 - **Phase 0 app skeleton (v0.1.0, code complete):** FastAPI app with Jinja2/HTMX UI shell (Discover · Library · Jobs · Settings), SQLite models (`Setting`, `Book`, `Chapter`, `Job`), a working Settings page persisting output folder + politeness/defaults, `/healthz` probe, `Dockerfile`, Compose-Manager-safe `docker-compose.yml`, and `requirements.txt`. Locally verified: boots, serves all pages, and settings survive a restart. See [docs/phases/phase-0-skeleton.md](docs/phases/phase-0-skeleton.md).
 
+### Added
+- **Phase 3 discovery — title search (v0.4.0, freewebnovel):** a Discover search box queries the
+  sites listed in the new **`search_sites`** setting (a multi-select auto-populated from adapters
+  that support search; freewebnovel only for now, more sites later). Results show title + chapter
+  count with a one-click **Import** that reuses the import-by-URL flow. Adds `Adapter.search()` +
+  `searchable` flag, `Fetcher.post()`, and `scrape.search_novels()`. Cross-site ranking is deferred
+  until more adapters exist. See [docs/phases/phase-3-discovery.md](docs/phases/phase-3-discovery.md).
+
 ### Fixed
 - **`no such column: volume.pdf_path` on startup/queries** after upgrading a DB that already
   had the `volume` table. Added a lightweight additive migration (`db._ensure_columns`) that
