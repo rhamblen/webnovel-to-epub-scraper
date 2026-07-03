@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# App runtime state (never commit — lives in the /config volume)
+/config/
+*.sqlite
+*.sqlite3
+*.db
+
+# Output books (delivered to the file share, not the repo)
+/output/
+
+# Scraper cache / temp
+/cache/
+*.tmp
+
+# Playwright
+/ms-playwright/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
