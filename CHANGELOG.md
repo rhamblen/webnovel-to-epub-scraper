@@ -7,7 +7,13 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Live build progress:** while a book builds, the Novel page shows a live progress bar with a
+  status message (Downloading chapters X/Y → Building EPUB → Building PDF → Done), polling
+  `GET /volumes/{id}/progress` every ~1.5s and auto-refreshing when finished. Backed by an
+  in-memory progress registry (`app/core/progress.py`) that the in-process build task updates;
+  `scrape_bodies` gained a `progress_cb`. Build tasks now also fail gracefully (marked `error`
+  instead of getting stuck on `building`). This is the "live progress" slice of Phase 5.
 
 ## [0.4.1] — 2026-07-03
 

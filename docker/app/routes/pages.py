@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from .. import settings_store
-from ..core import build, scrape
+from ..core import build, progress, scrape
 from ..core.adapters import get_adapter
 from ..core.fetch import DEFAULT_UA
 from ..db import get_engine
@@ -235,15 +235,32 @@ async def build_volume_route(volume_id: int):
         book_id = vol.book_id if vol else None
     if book_id is not None and volume_id not in _building:
         _building.add(volume_id)
+        progress.start(volume_id, message="Starting…")
 
         async def _run():
             try:
                 await build.build_volume(get_engine(), volume_id)
+            except Exception as e:
+                progress.finish(volume_id, "error", f"Build failed: {type(e).__name__}")
+                with Session(get_engine()) as s:
+                    v = s.get(Volume, volume_id)
+                    if v is not None:
+                        v.status = "error"
+                        v.note = f"Build failed: {type(e).__name__}: {e}"[:300]
+                        s.add(v)
+                        s.commit()
             finally:
                 _building.discard(volume_id)
 
         asyncio.create_task(_run())
     return RedirectResponse(url=f"/novels/{book_id}", status_code=303)
+
+
+@router.get("/volumes/{volume_id}/progress")
+def volume_progress(volume_id: int):
+    st = progress.get(volume_id)
+    st["building"] = volume_id in _building
+    return st
 
 
 @router.get("/jobs")

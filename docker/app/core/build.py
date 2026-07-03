@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 from .. import settings_store
 from ..config import config
 from ..models import Book, Chapter, Volume
-from . import scrape
+from . import progress, scrape
 from .epub import ChapterDoc, build_epub
 from .pdf import build_pdf
 
@@ -58,9 +58,25 @@ async def build_volume(engine, volume_id: int) -> dict:
         s.add(vol)
         s.commit()
         book_id, start, end = vol.book_id, vol.start_chapter, vol.end_chapter
+        listed = s.exec(
+            select(Chapter).where(
+                Chapter.book_id == book_id, Chapter.number >= start, Chapter.number <= end
+            )
+        ).all()
+        total_range = len(listed)
+        already = sum(1 for c in listed if c.clean_html)
+
+    progress.start(volume_id, total=total_range, done=already,
+                   message=f"Downloading chapters… {already}/{total_range}")
+
+    def _on_chapter(fetched: int) -> None:
+        progress.update(
+            volume_id, done=already + fetched,
+            message=f"Downloading chapters… {already + fetched}/{total_range}",
+        )
 
     # Download only this volume's range (idempotent — skips already-fetched chapters).
-    await scrape.scrape_bodies(engine, book_id, start=start, end=end)
+    await scrape.scrape_bodies(engine, book_id, start=start, end=end, progress_cb=_on_chapter)
 
     with Session(engine) as s:
         vol = s.get(Volume, volume_id)
@@ -78,6 +94,7 @@ async def build_volume(engine, volume_id: int) -> dict:
             vol.updated_at = _now()
             s.add(vol)
             s.commit()
+            progress.finish(volume_id, "error", "No downloaded chapters in range")
             return {"status": "error", "note": vol.note}
 
         cfg = settings_store.get_all(s)
@@ -94,6 +111,7 @@ async def build_volume(engine, volume_id: int) -> dict:
             vol.updated_at = _now()
             s.add(vol)
             s.commit()
+            progress.finish(volume_id, "error", "No output format enabled (see Settings)")
             return {"status": "error", "note": vol.note}
 
         vtitle = f"{book.title} - Book {vol.number:02d}"
@@ -104,7 +122,10 @@ async def build_volume(engine, volume_id: int) -> dict:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         base = os.path.join(output_dir, safe_filename(vtitle))
 
+        progress.update(volume_id, phase="building", done=len(downloaded), total=len(in_range))
+
         if want_epub:
+            progress.update(volume_id, message="Building EPUB…")
             epath = base + ".epub"
             tmp = epath + ".part"
             build_epub(
@@ -114,6 +135,7 @@ async def build_volume(engine, volume_id: int) -> dict:
             os.replace(tmp, epath)
             vol.epub_path = epath
         if want_pdf:
+            progress.update(volume_id, message="Building PDF…")
             ppath = base + ".pdf"
             tmp = ppath + ".part"
             build_pdf(
@@ -128,6 +150,7 @@ async def build_volume(engine, volume_id: int) -> dict:
         vol.updated_at = _now()
         s.add(vol)
         s.commit()
+        progress.finish(volume_id, vol.status, f"Done — {vol.note}")
         return {
             "status": vol.status, "epub": vol.epub_path, "pdf": vol.pdf_path,
             "chapters": len(downloaded), "of": len(in_range),

@@ -93,10 +93,12 @@ async def scrape_bodies(
     limit: int | None = None,
     start: int | None = None,
     end: int | None = None,
+    progress_cb=None,
 ) -> dict:
     """Fetch cleaned bodies for chapters that don't have them yet.
 
-    Optionally restrict to the inclusive chapter range [start, end]. Returns a summary.
+    Optionally restrict to the inclusive chapter range [start, end]. ``progress_cb`` (if
+    given) is called with the running count of chapters fetched so far. Returns a summary.
     """
     from .adapters.base import ChapterRef
 
@@ -137,6 +139,11 @@ async def scrape_bodies(
                     fetched += 1
                 except Exception:
                     errors += 1
+                if progress_cb is not None:
+                    try:
+                        progress_cb(fetched)
+                    except Exception:
+                        pass
         finally:
             await fetcher.aclose()
 

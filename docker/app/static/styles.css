@@ -101,4 +101,19 @@ button.ghost:hover { color: var(--err); border-color: var(--err); filter: none; 
 .badge.error { color: var(--err); }
 .badge.scraping, .badge.running, .badge.pending { color: var(--warn); }
 
+.build-progress .bar {
+  height: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.build-progress .bar-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0;
+  transition: width 0.4s ease;
+}
+.build-progress small { display: block; margin-top: 0.35rem; }
+
 .foot { color: var(--muted); text-align: center; padding: 1.5rem; font-size: 0.85rem; }

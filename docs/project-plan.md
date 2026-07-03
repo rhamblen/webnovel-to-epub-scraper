@@ -12,8 +12,10 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
 | 3 — Discovery       | v0.4.0 | ☑ | Search by title across a configurable site list (freewebnovel first) |
 | 4 — Coverage        | v0.5.0 | ☐ | Generic fallback + JS sites + more adapters |
-| 5 — Library & jobs  | v0.6.0 | ☐ | Library mgmt, live progress, incremental updates |
+| 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ + incremental update (rescan) ✓; persistent job queue + library mgmt pending |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
+| 7 — Content cleaning| v1.1.0 | ☐ | Layered de-junk: frequency dedup + fuzzy scrub + local-Ollama AI step (app-orchestrated) |
+| — v2.0 (future)     | v2.0.0 | ☐ | Whole pipeline orchestrated in **n8n** (import→scrape→clean→build), app becomes a stateless-ish service. See below. |
 
 Legend: ☐ not started · ◐ in progress · ☑ done
 
@@ -157,6 +159,59 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - **Deliverables:** v1.0.0 release, deployable via Compose Manager with a documented, repeatable procedure.
 - **Why:** turns a working prototype into something you can rely on and redeploy cleanly.
 - **Exit criteria:** copy stack to appdata → Compose Up → working build with no manual fixes.
+
+## Phase 7 — Content cleaning · v1.1.0
+
+- **Objective:** strip repeated ads/comment blocks and injected site-name watermarks (including
+  mid-sentence, obfuscated forms) from chapter bodies, well beyond today's static substring
+  blocklist in `core/clean.py`.
+- **What we build (layered, cheap→expensive, short-circuit early):**
+  - **Layer 0 — blocklist (exists):** current `_JUNK_SUBSTRINGS` per-paragraph drop.
+  - **Layer 1 — cross-chapter frequency dedup (no AI):** hash normalized paragraphs across a
+    book; a paragraph appearing in a high fraction of chapters (esp. first/last 1–2) is
+    boilerplate → drop. Near-dups via shingling / `difflib`. Runs as a post-scrape pass (whole
+    book is already in SQLite).
+  - **Layer 2 — fuzzy site-name scrub (no AI):** homoglyph/spacing normalization + regex removal
+    of known site tokens and templates (`read latest at …`, `updated on …`). Removes *fragments*,
+    not just whole paragraphs.
+  - **Layer 3 — local-Ollama AI step (UR1, GPU):** send the already-mostly-clean text to a small
+    instruct model (`qwen2.5:7b` / `llama3.1:8b`) via **an n8n webhook** (`POST {text}` →
+    `{junk_spans:[...]}`, JSON-schema constrained). n8n owns prompt/model/retries so tuning needs
+    **no Docker rebuild**; the app owns the DB and never lets n8n write it.
+  - **Layer 4 — verify-subset guardrail (no AI):** reject any AI output whose kept text isn't a
+    verbatim subset of the source; fall back to Layers 0–2. Non-negotiable with a local 7B.
+  - **Pattern promotion:** AI-found junk spans are stored per-book (`Book.boilerplate_patterns`)
+    and re-applied deterministically to later chapters, so AI calls taper toward zero.
+  - **Enablers:** populate the existing `Chapter.raw_html` column (re-clean without re-fetch);
+    add `Book.boilerplate_patterns` (safe additive migration via `_ensure_columns`); Settings:
+    `ollama_url`, `ollama_model`, `ai_clean_enabled`; a "re-clean book" action to reprocess
+    existing books.
+- **Prerequisites:** Phases 0–2 (works on stored bodies); independent of 4–6.
+- **Why:** repeated ads and injected watermarks are the top readability annoyance in scraped
+  serials; the deterministic layers alone (1–2) cut most of it at zero cost/latency, with the
+  local LLM as a safe, auditable fallback for obfuscated cases.
+- **Exit criteria:** on a real book, repeated end-of-chapter ad blocks and mid-text site names are
+  gone; no story text lost (subset guardrail holds); re-clean is idempotent.
+
+## v2.0 (future) — n8n pipeline orchestrator
+
+- **Objective:** move the *whole* pipeline into an **n8n orchestrator** (bumblebee-bot style),
+  with the app reduced to a stateless-ish service that owns the SQLite DB and exposes discrete,
+  idempotent steps.
+- **Design (already agreed):**
+  - **n8n conducts; the app owns state.** The orchestrator sequences retryable HTTP calls; the
+    app remains the *sole writer* to SQLite (single-writer store — n8n must never touch the file
+    directly). This is the SQLite-safe form of the bumblebee orchestrator pattern.
+  - **Flow:** `import → scrape (stores raw_html) → clean (Layers 0–2) → AI-clean (Ollama node
+    + subset guardrail) → build (EPUB/PDF) → [notify]`, each an HTTP call to the app.
+  - **Enabling gap:** the app is server-rendered (routes = `pages.py` + health) with no JSON API.
+    v2.0 requires a thin **`/api`** surface wrapping the existing functions (`import_novel`,
+    `scrape_bodies`, a new `clean_book`, `build`) — this is the orchestrator's control plane.
+  - Fits the pipeline's existing idempotency (`core/scrape.py` re-import/re-scrape are no-ops on
+    already-done work), so orchestrator retries are safe.
+  - **Notifications:** deferred (not in first cut).
+- **Prerequisites:** Phase 7 (the AI-clean step) plus the `/api` layer.
+- **Status:** designed, bookmarked — build later.
 
 ---
 
