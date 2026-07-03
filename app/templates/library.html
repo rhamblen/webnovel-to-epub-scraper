@@ -2,37 +2,25 @@
 {% block title %}Library — Webnovel to EPUB Scraper{% endblock %}
 {% block content %}
 <h1>Library</h1>
-<p class="muted">Your books and their download status. <a href="/discover">Add a novel →</a></p>
+<p class="muted">Your novels. <a href="/discover">Add a novel →</a></p>
 {% if rows %}
 <table class="grid">
-  <thead><tr><th>Title</th><th>Author</th><th>Chapters</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Novel</th><th>Author</th><th>Chapters</th><th>Books</th><th></th></tr></thead>
   <tbody>
   {% for r in rows %}
     <tr>
       <td>{{ r.book.title }}</td>
       <td>{{ r.book.author }}</td>
       <td>{{ r.done }}/{{ r.total }}</td>
-      <td>
-        {% if r.active %}<span class="badge running">downloading…</span>
-        {% elif r.done == r.total and r.total > 0 %}<span class="badge ready">ready</span>
-        {% else %}<span class="badge pending">{{ r.book.status }}</span>{% endif %}
-      </td>
-      <td>
-        {% if not r.active and r.done < r.total %}
-        <form method="post" action="/novels/{{ r.book.id }}/download" style="margin:0">
-          <button type="submit">Download chapters</button>
-        </form>
-        {% endif %}
-      </td>
+      <td>{{ r.volumes }}</td>
+      <td><a href="/novels/{{ r.book.id }}">Manage →</a></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
-<p class="muted" style="margin-top:0.75rem">Reload this page to update download progress
-  (live progress + EPUB build arrive in the next phases).</p>
 {% else %}
 <div class="card placeholder">
-  <p>No books yet. <a href="/discover">Add one by URL</a> to get started.</p>
+  <p>No novels yet. <a href="/discover">Add one by URL</a> to get started.</p>
 </div>
 {% endif %}
 {% endblock %}

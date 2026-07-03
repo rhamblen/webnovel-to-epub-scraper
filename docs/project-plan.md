@@ -9,7 +9,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 |-------|---------|--------|----------|
 | 0 — Skeleton        | v0.1.0 | ☑ | Container + web UI shell + settings + SQLite |
 | 1 — Scraper core    | v0.2.0 | ◐ | Fetch layer + first curated adapter (freewebnovel) |
-| 2 — EPUB MVP        | v0.3.0 | ☐ | Assemble + build EPUB + write to share (end-to-end) |
+| 2 — EPUB + books    | v0.3.0 | ◐ | Assemble + build EPUB per "book" (chapter range) + write to share |
 | 3 — Discovery       | v0.4.0 | ☐ | Search by title, recommend best source |
 | 4 — Coverage        | v0.5.0 | ☐ | Generic fallback + JS sites + more adapters |
 | 5 — Library & jobs  | v0.6.0 | ☐ | Library mgmt, live progress, incremental updates |
@@ -72,18 +72,27 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - **Why:** the fetch+extract+persist loop is the technical heart; proving it on one site de-risks everything downstream.
 - **Exit criteria:** point at a TOC URL → all chapters listed in order → bodies stored, re-run fetches nothing new.
 
-## Phase 2 — EPUB MVP · v0.3.0
+## Phase 2 — EPUB + books · v0.3.0
 
-- **Objective:** first true end-to-end run — URL in, EPUB on the share.
+- **Objective:** first true end-to-end run — URL in, one or more EPUBs on the share.
 - **What we build:**
-  - Assembler: order chapters, de-dupe, normalize HTML, optional strip of translator/pre-post notes.
-  - EPUB builder (EbookLib): metadata (title, author, series, language), cover (generated placeholder if none), spine + navigable TOC, one XHTML per chapter.
-  - Delivery writer: atomically write `Author - Title.epub` to the configured output path; safe filename handling.
-  - "Build book" job wired end-to-end with a job record + basic progress.
+  - **"Books" (volumes):** a novel can be split into user-defined books, each a chapter
+    range (`start`, `end`) with a book number + optional title. A whole novel is just one
+    book spanning 1..N. Handles multi-book series (e.g. Shadow Slave Book 1–10). See
+    [ADR 0006](decisions/0006-books-and-volumes.md).
+  - EPUB builder (EbookLib): metadata (title, author, language), cover (fetched from source),
+    `calibre:series` metadata so books group in Calibre/Kavita, navigable TOC, one XHTML per chapter.
+  - Range-limited download so each book fetches only its own chapters (idempotent).
+  - Delivery writer: atomically write `<Novel> - Book NN[ - Title].epub` to the configured
+    output path (`/output` → `/mnt/user/media/books/webnovels`); safe filename handling.
+  - Novel detail page: define books, build/rebuild each, see status + output filename.
 - **Prerequisites:** Phases 0–1.
-- **Deliverables:** a validated EPUB (passes epubcheck-level structure) readable on a Kindle Paperwhite.
-- **Why:** delivers the core user value; everything after is discovery, coverage, and polish.
-- **Exit criteria:** run a build → EPUB appears on share → sideloads and reads correctly on-device.
+- **Deliverables:** a validated EPUB (correct structure, cover, series metadata) per book,
+  readable on a Kindle Paperwhite.
+- **Why:** delivers the core user value; multi-book support matches how long web serials are
+  actually published and read.
+- **Exit criteria:** define a book by range → build → EPUB appears on the share → sideloads
+  and reads correctly on-device.
 
 ## Phase 3 — Discovery · v0.4.0
 

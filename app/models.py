@@ -48,6 +48,27 @@ class Chapter(SQLModel, table=True):
     fetched_at: Optional[datetime] = None
 
 
+class Volume(SQLModel, table=True):
+    """A user-defined "book" = a chapter range of a novel that builds one EPUB.
+
+    A whole-novel EPUB is just a Volume spanning start_chapter=1..end_chapter=N.
+    (In the UI this is labelled a "Book"; ``Book`` above is the source novel/series.)
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    book_id: int = Field(foreign_key="book.id", index=True)
+    number: int  # the "book number" (e.g. Shadow Slave Book 3)
+    title: str = ""  # optional volume title
+    start_chapter: int
+    end_chapter: int
+    # new | building | ready | error | partial
+    status: str = "new"
+    epub_path: Optional[str] = None
+    note: str = ""
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
 class Job(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     book_id: Optional[int] = Field(default=None, foreign_key="book.id", index=True)

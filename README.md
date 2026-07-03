@@ -13,6 +13,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 - **Identify a novel** — search by title and get back candidate sources with a **recommended site** to scrape from (ranked by reliability and completeness).
 - **Scrape chapters** — curated per-site adapters for popular hosts, plus a generic reader-mode fallback for everything else; handles both static and JavaScript-rendered pages.
 - **Assemble** — collate every chapter into one normalized master document, in order, de-duplicated and cleaned (optional stripping of translator notes / ads).
+- **Split into books** — a long serial can be carved into multiple "books" by chapter range (start/end + book number), each built as its own EPUB with `calibre:series` metadata so they group in Calibre/Kavita. A whole novel is just one book spanning all chapters.
 - **Convert to EPUB** — proper metadata (title, author, series, cover), a navigable table of contents, one chapter per section. Native reading on modern Kindle Paperwhite via Send-to-Kindle.
 - **Deliver to your library** — writes the EPUB straight to a configured Unraid share so Calibre/Kavita on UR1 can pick it up.
 - **Incremental updates** — re-run an existing book to fetch only newly-published chapters.
@@ -25,7 +26,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 |---------|--------|----------|
 | v0.1.0  | ☑ done | App skeleton: container, web UI shell, settings, SQLite, health check |
 | v0.2.0  | ◐ in progress | Scraper core + first curated adapter (freewebnovel): import + download chapters |
-| v0.3.0  | ☐ planned | Assembler + EPUB output written to file share — end-to-end MVP |
+| v0.3.0  | ◐ in progress | Build EPUB per "book" (chapter range) + write to share — end-to-end |
 | v0.4.0  | ☐ planned | Discovery: search by title, recommend best source site |
 | v0.5.0  | ☐ planned | Generic fallback scraper, JS-rendered sites, more adapters |
 | v0.6.0  | ☐ planned | Library management, live job progress, incremental updates |

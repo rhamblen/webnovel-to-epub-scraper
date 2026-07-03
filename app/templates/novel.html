@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }} — Webnovel to EPUB Scraper{% endblock %}
+{% block content %}
+<p class="muted"><a href="/library">← Library</a></p>
+<h1>{{ book.title }}</h1>
+<p class="muted">by {{ book.author }} · {{ done }}/{{ total }} chapters downloaded
+  · {{ max_ch }} chapters available</p>
+
+{% if error %}<div class="notice err">{{ error }}</div>{% endif %}
+
+<h2>Books</h2>
+<p class="muted">Define a “book” by chapter range and build it into its own EPUB.
+  For a whole novel in one file, use start 1 and end {{ max_ch }}.</p>
+
+{% if vols %}
+<table class="grid">
+  <thead><tr><th>#</th><th>Title</th><th>Chapters</th><th>Downloaded</th><th>Status</th><th>File</th><th></th></tr></thead>
+  <tbody>
+  {% for row in vols %}
+    <tr>
+      <td>{{ '%02d' % row.v.number }}</td>
+      <td>{{ row.v.title or '—' }}</td>
+      <td>{{ row.v.start_chapter }}–{{ row.v.end_chapter }}</td>
+      <td>{{ row.done }}/{{ row.total }}</td>
+      <td>
+        {% if row.building %}<span class="badge running">building…</span>
+        {% else %}<span class="badge {{ row.v.status }}">{{ row.v.status }}</span>{% endif %}
+        {% if row.v.note %}<br><small class="muted">{{ row.v.note }}</small>{% endif %}
+      </td>
+      <td><small>{% if row.v.epub_path %}{{ row.v.epub_path.split('/')[-1] }}{% else %}—{% endif %}</small></td>
+      <td>
+        {% if not row.building %}
+        <form method="post" action="/volumes/{{ row.v.id }}/build" style="margin:0">
+          <button type="submit">{% if row.v.epub_path %}Rebuild{% else %}Build EPUB{% endif %}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted" style="margin-top:0.5rem">Reload to update build progress (live progress
+  arrives in Phase 5).</p>
+{% else %}
+<div class="card placeholder"><p>No books defined yet. Add one below.</p></div>
+{% endif %}
+
+<h2 style="margin-top:1.5rem">Add a book</h2>
+<form method="post" action="/novels/{{ book.id }}/volumes" class="card">
+  <div class="field" style="max-width:120px">
+    <label for="number">Book number</label>
+    <input type="number" id="number" name="number" min="1" value="{{ (vols|length) + 1 }}">
+  </div>
+  <div class="field">
+    <label for="title">Title (optional)</label>
+    <input type="text" id="title" name="title" placeholder="e.g. Nightmare Begins">
+  </div>
+  <div class="field" style="max-width:160px">
+    <label for="start">Start chapter</label>
+    <input type="number" id="start" name="start" min="1" value="1">
+  </div>
+  <div class="field" style="max-width:160px">
+    <label for="end">End chapter</label>
+    <input type="number" id="end" name="end" min="1" value="{{ max_ch }}">
+  </div>
+  <div class="actions"><button type="submit">Add book</button></div>
+</form>
+{% endblock %}

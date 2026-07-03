@@ -1,8 +1,8 @@
-"""HTML pages: Discover, Library, Jobs, Settings.
+"""HTML pages: Discover, Library, Novel detail, Jobs, Settings.
 
-Phase 0 rendered the shell; Phase 1 adds an "add novel by URL" flow that imports the
-chapter list and downloads bodies in the background. The download runs as a fire-and-
-forget asyncio task for now — Phase 5 replaces it with a proper job queue + live UI.
+Phase 2 adds the Novel detail page: define "books" (volumes) by chapter range and build
+each into an EPUB written to the output share. Builds run as fire-and-forget asyncio
+tasks for now — Phase 5 replaces them with a persistent job queue + live progress.
 """
 import asyncio
 from pathlib import Path
@@ -13,15 +13,26 @@ from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select
 
 from .. import settings_store
-from ..core import scrape
+from ..core import build, scrape
 from ..db import get_engine
-from ..models import Book, Chapter, Job
+from ..models import Book, Chapter, Job, Volume
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
-# Book ids currently downloading (in-memory; superseded by the Phase 5 job system).
-_active: set[int] = set()
+# Volume ids currently building (in-memory; superseded by the Phase 5 job system).
+_building: set[int] = set()
+
+
+def _counts(s: Session, book_id: int, start: int | None = None, end: int | None = None):
+    conds = [Chapter.book_id == book_id]
+    if start is not None:
+        conds.append(Chapter.number >= start)
+    if end is not None:
+        conds.append(Chapter.number <= end)
+    listed = s.exec(select(Chapter).where(*conds)).all()
+    done = sum(1 for c in listed if c.clean_html)
+    return len(listed), done
 
 
 @router.get("/")
@@ -31,9 +42,7 @@ def index():
 
 @router.get("/discover")
 def discover(request: Request, error: str | None = None):
-    return templates.TemplateResponse(
-        request, "discover.html", {"active": "discover", "error": error}
-    )
+    return templates.TemplateResponse(request, "discover.html", {"active": "discover", "error": error})
 
 
 @router.post("/novels")
@@ -43,28 +52,13 @@ async def add_novel(request: Request):
     if not url:
         return RedirectResponse(url="/discover", status_code=303)
     try:
-        await scrape.import_novel(get_engine(), url)
-    except Exception as e:  # surface the reason on the Discover page
+        book_id = await scrape.import_novel(get_engine(), url)
+    except Exception as e:
         return templates.TemplateResponse(
             request, "discover.html",
             {"active": "discover", "error": f"{type(e).__name__}: {e}", "url": url},
         )
-    return RedirectResponse(url="/library", status_code=303)
-
-
-@router.post("/novels/{book_id}/download")
-async def download(book_id: int):
-    if book_id not in _active:
-        _active.add(book_id)
-
-        async def _run():
-            try:
-                await scrape.scrape_bodies(get_engine(), book_id)
-            finally:
-                _active.discard(book_id)
-
-        asyncio.create_task(_run())
-    return RedirectResponse(url="/library", status_code=303)
+    return RedirectResponse(url=f"/novels/{book_id}", status_code=303)
 
 
 @router.get("/library")
@@ -73,16 +67,65 @@ def library(request: Request):
     with Session(get_engine()) as s:
         books = s.exec(select(Book).order_by(Book.updated_at.desc())).all()
         for b in books:
-            total = len(s.exec(select(Chapter.id).where(Chapter.book_id == b.id)).all())
-            done = len(
-                s.exec(
-                    select(Chapter.id).where(
-                        Chapter.book_id == b.id, Chapter.clean_html.is_not(None)
-                    )
-                ).all()
-            )
-            rows.append({"book": b, "total": total, "done": done, "active": b.id in _active})
+            total, done = _counts(s, b.id)
+            n_vols = len(s.exec(select(Volume).where(Volume.book_id == b.id)).all())
+            rows.append({"book": b, "total": total, "done": done, "volumes": n_vols})
     return templates.TemplateResponse(request, "library.html", {"active": "library", "rows": rows})
+
+
+@router.get("/novels/{book_id}")
+def novel_detail(request: Request, book_id: int, error: str | None = None):
+    with Session(get_engine()) as s:
+        book = s.get(Book, book_id)
+        if book is None:
+            return RedirectResponse(url="/library", status_code=303)
+        total, done = _counts(s, book_id)
+        max_ch = max((c.number for c in s.exec(select(Chapter).where(Chapter.book_id == book_id)).all()), default=0)
+        vols = []
+        for v in s.exec(select(Volume).where(Volume.book_id == book_id).order_by(Volume.number)).all():
+            v_total, v_done = _counts(s, book_id, v.start_chapter, v.end_chapter)
+            vols.append({"v": v, "total": v_total, "done": v_done, "building": v.id in _building})
+    return templates.TemplateResponse(
+        request, "novel.html",
+        {"active": "library", "book": book, "total": total, "done": done,
+         "max_ch": max_ch, "vols": vols, "error": error},
+    )
+
+
+@router.post("/novels/{book_id}/volumes")
+async def add_volume(request: Request, book_id: int):
+    form = await request.form()
+    try:
+        number = int(str(form.get("number", "")).strip())
+        start = int(str(form.get("start", "")).strip())
+        end = int(str(form.get("end", "")).strip())
+        title = str(form.get("title", "")).strip()
+        if start < 1 or end < start:
+            raise ValueError("start must be >= 1 and end >= start")
+    except (ValueError, TypeError) as e:
+        return RedirectResponse(url=f"/novels/{book_id}?error=Invalid+range:+{e}", status_code=303)
+    with Session(get_engine()) as s:
+        s.add(Volume(book_id=book_id, number=number, title=title, start_chapter=start, end_chapter=end))
+        s.commit()
+    return RedirectResponse(url=f"/novels/{book_id}", status_code=303)
+
+
+@router.post("/volumes/{volume_id}/build")
+async def build_volume_route(volume_id: int):
+    with Session(get_engine()) as s:
+        vol = s.get(Volume, volume_id)
+        book_id = vol.book_id if vol else None
+    if book_id is not None and volume_id not in _building:
+        _building.add(volume_id)
+
+        async def _run():
+            try:
+                await build.build_volume(get_engine(), volume_id)
+            finally:
+                _building.discard(volume_id)
+
+        asyncio.create_task(_run())
+    return RedirectResponse(url=f"/novels/{book_id}", status_code=303)
 
 
 @router.get("/jobs")
@@ -97,8 +140,7 @@ def settings_get(request: Request, saved: bool = False):
     with Session(get_engine()) as s:
         values = settings_store.get_all(s)
     return templates.TemplateResponse(
-        request,
-        "settings.html",
+        request, "settings.html",
         {"active": "settings", "fields": settings_store.FIELDS, "values": values, "saved": saved},
     )
 

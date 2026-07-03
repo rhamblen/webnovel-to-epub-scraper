@@ -21,12 +21,13 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
 | Stack | Python 3.12 + FastAPI + Jinja2/HTMX; SQLite; in-process asyncio worker | [0001](decisions/0001-tech-stack.md) |
 | Output & delivery | EPUB only for v1; delivery = write to Unraid file share. Calibre/Kavita/Send-to-Kindle are deferred optional consumers | [0002](decisions/0002-epub-output-and-delivery.md) |
 | Scraper strategy | Curated per-site adapters + generic readability fallback; Playwright only when JS is required | [0003](decisions/0003-scraper-adapter-strategy.md) |
+| Books / volumes | A novel splits into user-defined "books" (`Volume` = chapter range + number); one EPUB per book; `calibre:series` groups them. Whole novel = one book 1..N | [0006](decisions/0006-books-and-volumes.md) |
 | Legal/ethical | Personal use only; respect robots.txt + rate limits; no paywalled/auth'd sources | [0004](decisions/0004-legal-and-ethical-use.md) |
 
 ## Environment / target host
 
 - Deploys to **Unraid** (user has UR1 and UR2; Calibre + Kavita run on UR1).
-- Volumes: `/config` (state) and `/output` (books share, e.g. `/mnt/user/books`). HTTP port default 8080.
+- Volumes: `/config` (state) and `/output` → **`/mnt/user/media/books/webnovels`** (UR1 has no dedicated books share; this is under the existing `media` share). HTTP port default 8080 (host 8577).
 - **Deploy = Unraid Compose Manager plugin.** Sources copied by the *user* to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`, then **Compose Up**. See [ADR 0005](decisions/0005-unraid-deploy-workflow.md).
 - **Build division of labour:** Claude edits Docker source **locally only**; the user copies to appdata + deploys. Never emit raw `docker compose` CLI for the appdata folder (project-name footgun → wrong tags/network). End deploy-affecting changes with a **▶ YOUR TURN** block.
 - User is on Windows 11; shell is PowerShell (Bash tool also available). Repo not yet `git init`'d.

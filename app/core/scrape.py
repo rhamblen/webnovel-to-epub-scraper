@@ -66,8 +66,17 @@ async def import_novel(engine, url: str) -> int:
         return book.id
 
 
-async def scrape_bodies(engine, book_id: int, limit: int | None = None) -> dict:
-    """Fetch cleaned bodies for chapters that don't have them yet. Returns a summary."""
+async def scrape_bodies(
+    engine,
+    book_id: int,
+    limit: int | None = None,
+    start: int | None = None,
+    end: int | None = None,
+) -> dict:
+    """Fetch cleaned bodies for chapters that don't have them yet.
+
+    Optionally restrict to the inclusive chapter range [start, end]. Returns a summary.
+    """
     from .adapters.base import ChapterRef
 
     with Session(engine) as s:
@@ -78,10 +87,13 @@ async def scrape_bodies(engine, book_id: int, limit: int | None = None) -> dict:
         if adapter is None:
             raise ValueError(f"No adapter for {book.toc_url}")
 
+        conditions = [Chapter.book_id == book_id, Chapter.clean_html.is_(None)]
+        if start is not None:
+            conditions.append(Chapter.number >= start)
+        if end is not None:
+            conditions.append(Chapter.number <= end)
         pending = s.exec(
-            select(Chapter)
-            .where(Chapter.book_id == book_id, Chapter.clean_html.is_(None))
-            .order_by(Chapter.number)
+            select(Chapter).where(*conditions).order_by(Chapter.number)
         ).all()
         if limit is not None:
             pending = pending[:limit]
