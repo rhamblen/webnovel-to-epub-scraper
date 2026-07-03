@@ -19,6 +19,8 @@ def _defaults() -> dict[str, str]:
         "strip_translator_notes": "false",
         "cover_style": "simple",
         "user_agent": "",
+        "format_epub": "true",
+        "format_pdf": "true",
     }
 
 
@@ -28,8 +30,9 @@ FIELDS = [
         "key": "output_dir",
         "label": "Output folder",
         "type": "text",
-        "help": "Where finished EPUBs are written. In the container this is the mounted "
-        "books share (default /output).",
+        "help": "Where finished files are written, as seen INSIDE the container. Leave this "
+        "as /output — docker-compose maps /output to your UR1 share "
+        "(/mnt/user/media/books/webnovels). Do not put the UR1 path here.",
     },
     {
         "key": "concurrency",
@@ -69,6 +72,18 @@ FIELDS = [
         "type": "select",
         "options": ["simple", "none"],
         "help": "Placeholder cover generated when the source has no cover image.",
+    },
+    {
+        "key": "format_epub",
+        "label": "Build EPUB",
+        "type": "checkbox",
+        "help": "Produce an .epub for each book (best for Kindle Paperwhite).",
+    },
+    {
+        "key": "format_pdf",
+        "label": "Build PDF",
+        "type": "checkbox",
+        "help": "Also produce a .pdf for each book (fixed layout; handy for other readers).",
     },
     {
         "key": "user_agent",

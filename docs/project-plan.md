@@ -82,6 +82,8 @@ Legend: ☐ not started · ◐ in progress · ☑ done
     [ADR 0006](decisions/0006-books-and-volumes.md).
   - EPUB builder (EbookLib): metadata (title, author, language), cover (fetched from source),
     `calibre:series` metadata so books group in Calibre/Kavita, navigable TOC, one XHTML per chapter.
+  - Optional **PDF** per book (fpdf2, pure-Python) written alongside the EPUB; toggle
+    `format_epub` / `format_pdf` in Settings. See [ADR 0007](decisions/0007-also-emit-pdf.md).
   - Range-limited download so each book fetches only its own chapters (idempotent).
   - Delivery writer: atomically write `<Novel> - Book NN[ - Title].epub` to the configured
     output path (`/output` → `/mnt/user/media/books/webnovels`); safe filename handling.

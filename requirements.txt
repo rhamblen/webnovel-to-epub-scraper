@@ -8,3 +8,4 @@ pydantic-settings>=2.6,<3.0
 httpx>=0.27,<0.29
 beautifulsoup4>=4.12,<5.0
 ebooklib>=0.18
+fpdf2>=2.7

@@ -64,6 +64,7 @@ class Volume(SQLModel, table=True):
     # new | building | ready | error | partial
     status: str = "new"
     epub_path: Optional[str] = None
+    pdf_path: Optional[str] = None
     note: str = ""
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)

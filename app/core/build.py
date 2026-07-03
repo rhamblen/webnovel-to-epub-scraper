@@ -17,6 +17,7 @@ from .. import settings_store
 from ..models import Book, Chapter, Volume
 from . import scrape
 from .epub import ChapterDoc, build_epub
+from .pdf import build_pdf
 
 _ILLEGAL = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -84,30 +85,46 @@ async def build_volume(engine, volume_id: int) -> dict:
         if cfg.get("cover_style", "simple") != "none":
             cover = await _fetch_cover(s, book.cover_path)
 
+        want_epub = cfg.get("format_epub", "true") == "true"
+        want_pdf = cfg.get("format_pdf", "true") == "true"
+        if not (want_epub or want_pdf):
+            vol.status = "error"
+            vol.note = "No output format enabled (see Settings)"
+            vol.updated_at = _now()
+            s.add(vol)
+            s.commit()
+            return {"status": "error", "note": vol.note}
+
         vtitle = f"{book.title} - Book {vol.number:02d}"
         if vol.title:
             vtitle += f" - {vol.title}"
 
         docs = [ChapterDoc(number=c.number, title=c.title, html=c.clean_html) for c in downloaded]
         Path(output_dir).mkdir(parents=True, exist_ok=True)
-        final = os.path.join(output_dir, safe_filename(vtitle) + ".epub")
-        tmp = final + ".part"
-        build_epub(
-            tmp,
-            title=vtitle,
-            author=book.author,
-            language=book.language,
-            chapters=docs,
-            series_name=book.title,
-            series_index=vol.number,
-            cover=cover,
-        )
-        os.replace(tmp, final)
+        base = os.path.join(output_dir, safe_filename(vtitle))
 
-        vol.epub_path = final
+        if want_epub:
+            epath = base + ".epub"
+            tmp = epath + ".part"
+            build_epub(
+                tmp, title=vtitle, author=book.author, language=book.language,
+                chapters=docs, series_name=book.title, series_index=vol.number, cover=cover,
+            )
+            os.replace(tmp, epath)
+            vol.epub_path = epath
+        if want_pdf:
+            ppath = base + ".pdf"
+            tmp = ppath + ".part"
+            build_pdf(tmp, title=vtitle, author=book.author, chapters=docs)
+            os.replace(tmp, ppath)
+            vol.pdf_path = ppath
+
         vol.status = "ready" if len(downloaded) == len(in_range) else "partial"
         vol.note = f"{len(downloaded)}/{len(in_range)} chapters in range"
         vol.updated_at = _now()
         s.add(vol)
         s.commit()
-        return {"status": vol.status, "epub": final, "chapters": len(downloaded), "of": len(in_range)}
+        return {
+            "status": vol.status, "epub": vol.epub_path, "pdf": vol.pdf_path,
+            "chapters": len(downloaded), "of": len(in_range),
+        }

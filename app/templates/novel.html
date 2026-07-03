@@ -27,7 +27,11 @@
         {% else %}<span class="badge {{ row.v.status }}">{{ row.v.status }}</span>{% endif %}
         {% if row.v.note %}<br><small class="muted">{{ row.v.note }}</small>{% endif %}
       </td>
-      <td><small>{% if row.v.epub_path %}{{ row.v.epub_path.split('/')[-1] }}{% else %}—{% endif %}</small></td>
+      <td><small>
+        {% if row.v.epub_path %}📗 {{ row.v.epub_path.split('/')[-1] }}<br>{% endif %}
+        {% if row.v.pdf_path %}📕 {{ row.v.pdf_path.split('/')[-1] }}{% endif %}
+        {% if not row.v.epub_path and not row.v.pdf_path %}—{% endif %}
+      </small></td>
       <td>
         {% if not row.building %}
         <form method="post" action="/volumes/{{ row.v.id }}/build" style="margin:0">

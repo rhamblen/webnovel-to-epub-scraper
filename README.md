@@ -14,7 +14,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 - **Scrape chapters** — curated per-site adapters for popular hosts, plus a generic reader-mode fallback for everything else; handles both static and JavaScript-rendered pages.
 - **Assemble** — collate every chapter into one normalized master document, in order, de-duplicated and cleaned (optional stripping of translator notes / ads).
 - **Split into books** — a long serial can be carved into multiple "books" by chapter range (start/end + book number), each built as its own EPUB with `calibre:series` metadata so they group in Calibre/Kavita. A whole novel is just one book spanning all chapters.
-- **Convert to EPUB** — proper metadata (title, author, series, cover), a navigable table of contents, one chapter per section. Native reading on modern Kindle Paperwhite via Send-to-Kindle.
+- **Convert to EPUB (+ optional PDF)** — proper metadata (title, author, series, cover), a navigable table of contents, one chapter per section. Native reading on modern Kindle Paperwhite via Send-to-Kindle. A matching PDF can be produced alongside each EPUB (toggleable in Settings).
 - **Deliver to your library** — writes the EPUB straight to a configured Unraid share so Calibre/Kavita on UR1 can pick it up.
 - **Incremental updates** — re-run an existing book to fetch only newly-published chapters.
 - **Browser UI** — Discover, Library, Jobs (live progress), and Settings pages. No CLI needed.
