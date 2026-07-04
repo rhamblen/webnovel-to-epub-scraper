@@ -11,7 +11,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 1 — Scraper core    | v0.2.0 | ☑ | Fetch layer + first curated adapter (freewebnovel) |
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
 | 3 — Discovery       | v0.4.0 | ☑ | Search by title across a configurable site list (freewebnovel first) |
-| 4 — Coverage        | v0.5.0 | ◐ | royalroad + webnovel.com (free-prefix) + libread adapters ✓ (shipped in v0.4.3); generic fallback + Playwright + self-test harness still pending |
+| 4 — Coverage        | v0.5.0 | ☑ | royalroad + webnovel.com (free-prefix) + libread adapters (v0.4.3) + self-test harness (v0.4.5) + generic fallback (v0.4.6) + Playwright rendering (v0.5.0) — phase complete |
 | 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ (v0.4.2) + rescan ✓ (v0.4.1); persistent job queue + real library-management page still pending — `Job` table/`/jobs` page exist but are currently unwired |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
 | 7 — Content cleaning| v1.1.0 | ◐ | Layer 0+2 ✓ (shipped in v0.4.4: labeled, countable, dedicated Clean/Re-clean button) + fuzzy/homoglyph scrub; frequency dedup + local-Ollama AI step still pending |
@@ -125,10 +125,37 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 
 - **Objective:** work on sites without a hand-written adapter, including JS-heavy ones.
 - **What we build:**
-  - Generic fallback extractor (readability-style) for TOC and chapter bodies with heuristics. (☐ pending)
-  - Playwright rendering path for sites that need a real browser; auto-selected per adapter/site. (☐ pending)
+  - Generic fallback extractor (readability-style) for TOC and chapter bodies with heuristics. (☑ done —
+    `core/adapters/generic.py`. TOC: largest same-parent link cluster that looks
+    chapter-shaped (or is just very large), numbered in DOM order. Body: `readability-lxml`'s
+    `Document.summary()`. Always matches any http(s) URL and sits last in the registry, so
+    `get_adapter()` never returns `None` for a well-formed URL. Not searchable. A `Book.note`
+    surfaces the best-effort caveat, same mechanism webnovel.com's free-prefix note uses.
+    Security note: since it matches *any* host, it's excluded from the `/cover` proxy
+    allowlist via a new `Adapter.is_fallback` flag — see `cover_url_allowed` — otherwise
+    that route would become an open image proxy.)
+  - Playwright rendering path for sites that need a real browser; auto-selected per adapter/site. (☑ done —
+    `core/render.py` (`Renderer`, lazy-launched headless Chromium, reused for the rest of
+    the scrape) + `Fetcher.get_rendered()` (`core/fetch.py`), sharing the same robots.txt/
+    pacing/concurrency/retry machinery as the static path. Curated adapters would opt in
+    via the existing static `needs_render` flag (none need it yet — all three surveyed
+    sites serve plain HTML); the generic adapter auto-detects per-page instead, since it
+    can't know in advance: chapter bodies check raw visible-text length before extracting,
+    TOC pages extract first and only render-retry if that comes up empty (link-dense TOC
+    pages are naturally prose-sparse, so checking text length up front there would
+    misfire — a real bug this design went through during testing, see `tests/test_generic.py`).
+    Docker base image switched to `mcr.microsoft.com/playwright/python:v1.61.0-noble`
+    (pre-installed matching browser binaries, no separate `playwright install` step).
+    Verified against both fake-Renderer unit tests and one real local headless-Chromium
+    run against a JS-only test page.)
   - 2–3 more curated adapters for the most common hosts. (☑ done — royalroad, webnovel.com, libread; see "Candidate sites surveyed" below)
-  - Adapter self-test harness (fixtures of saved HTML) to catch site drift. (☐ pending)
+  - Adapter self-test harness (fixtures of saved HTML) to catch site drift. (☑ done —
+    pytest + a `FixtureFetcher` test double in `docker/tests/`; hand-built fixtures per
+    curated adapter mirroring each one's documented live-verified selectors, a shared
+    parametrized contract test, plus per-adapter quirk regressions — libread
+    normalization, Royal Road anti-theft-paragraph stripping, webnovel.com's paywall
+    boundary. Frozen snapshots: catches our own parsing regressions instantly, but a
+    real site change still needs a manual fixture refresh.)
 - **Prerequisites:** Phases 0–3.
 - **Deliverables:** "just paste a URL" works on most sites, best-effort, with clear warnings when quality is uncertain.
 - **Why:** maximizes the set of readable novels without unbounded per-site maintenance.
@@ -136,11 +163,15 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - **Candidate sites surveyed (2026-07-04):**
   - **libread.com — ☑ done (pre-Phase-4).** Same catalogue as freewebnovel (chapter links
     redirect there); handled as URL normalization inside the existing adapter, not a new one.
-  - **noveltrust.com — ✗ shelved (Cloudflare).** Only the novel landing page is directly
+  - **noveltrust.com — ✗ still shelved (Cloudflare).** Only the novel landing page is directly
     reachable; TOC pagination (`/book/<slug>/2`) and every chapter URL 302 to `novellive.app`,
-    which is behind a Cloudflare JS challenge. Revisit when the Playwright path exists. For the
-    record: search = POST `/search/` (`searchkey`), selectors are freewebnovel-family
-    (`h1.tit`, `.m-imgtxt`), chapter URLs embed title slugs, TOC paginated in 40s.
+    which is behind a Cloudflare JS *challenge* (bot-detection, not just JS-rendered content —
+    a different, harder problem than what the new Playwright path solves; Cloudflare
+    specifically tries to detect and block headless automation, so plain Playwright
+    rendering likely still won't get past it without further work this project hasn't
+    taken on). For the record: search = POST `/search/` (`searchkey`), selectors are
+    freewebnovel-family (`h1.tit`, `.m-imgtxt`), chapter URLs embed title slugs, TOC
+    paginated in 40s.
   - **royalroad.com — ☑ done.** Adapter with search + content (`royalroad.py`); full TOC on
     the fiction page (no pagination); strips injected hidden anti-theft paragraphs. Still
     possible later: a "browse rankings" discovery mode (`/fictions/best-rated`), per-fiction RSS.

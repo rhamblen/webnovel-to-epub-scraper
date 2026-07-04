@@ -9,3 +9,7 @@ httpx>=0.27,<0.29
 beautifulsoup4>=4.12,<5.0
 ebooklib>=0.18
 fpdf2>=2.7
+readability-lxml>=0.8,<0.9
+# Exact pin (not a range): must match the Dockerfile base image tag exactly, since that
+# image ships pre-installed browser binaries built for this specific Playwright version.
+playwright==1.61.0

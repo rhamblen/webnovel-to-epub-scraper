@@ -1,7 +1,11 @@
-# Phase 0 uses a slim Python base. Phase 4 (JS-rendered sites) switches this to a
-# Playwright-capable base image (e.g. mcr.microsoft.com/playwright/python) so the
-# skeleton image stays small until browser rendering is actually needed.
-FROM python:3.12-slim
+# Phase 4 (JS-rendered sites): the official Playwright image, pre-installed with Python
+# 3.12, headless Chromium, and its OS-level dependencies (an Ubuntu Noble/24.04 base) —
+# no separate `playwright install` step needed. Version pinned exactly to match the
+# `playwright` package version in requirements.txt (see the comment there); bump both
+# together. Bigger than the old python:3.12-slim base (browsers add well over 1GB), but
+# the browser process itself is still only launched lazily, on the first page that
+# actually needs rendering (see core/render.py).
+FROM mcr.microsoft.com/playwright/python:v1.61.0-noble
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1

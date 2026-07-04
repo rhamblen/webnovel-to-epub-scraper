@@ -39,9 +39,14 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
 
 ## Core interfaces (target)
 
-- Adapter: `fetch_novel(url)` and `fetch_chapter(ref)`, optional `search(query)` (gated by a `searchable` flag), plus a `needs_render` flag. Registry: `get_adapter(url)`, `get_adapter_by_name(name)`, `searchable_names()`.
+- Adapter: `fetch_novel(url)` and `fetch_chapter(ref)`, optional `search(query)` (gated by a `searchable` flag), plus `needs_render` and `is_fallback` flags. Registry: `get_adapter(url)` (curated adapters first, `GenericAdapter` catch-all last — always returns something for a well-formed URL), `get_adapter_by_name(name)`, `searchable_names()`, `cover_url_allowed(url)`.
 - Discover search: `scrape.search_novels(query)` fans out over the sites in the `search_sites` setting.
-- Fetch layer owns rate limiting / robots / retries (GET + POST) so adapters stay thin.
+- Fetch layer owns rate limiting / robots / retries (GET + POST + `get_rendered`) so adapters stay thin.
+- Rendering (Phase 4/v0.5.0): `Fetcher.get_rendered(url)` → `core/render.py`'s `Renderer`
+  (lazy-launched headless Chromium via Playwright, reused for the rest of the scrape).
+  Curated adapters opt in via the static `needs_render` flag (none need it yet); the
+  generic adapter decides per-page at runtime instead — see its module docstring for the
+  two different shell-detection checks (chapter body vs. TOC page).
 - EPUB builder: EbookLib — metadata, cover, navigable TOC, one XHTML per chapter.
 
 ## Gotchas / watch-list
@@ -50,21 +55,32 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
   is handled at startup by `db._ensure_columns` (additive `ALTER TABLE ADD COLUMN`, nullable
   only). Renaming/removing columns or changing types still needs a manual migration or a DB reset.
 
-- **Site drift** breaks curated adapters — keep saved-HTML fixtures + a self-test harness (Phase 4).
-- **Playwright** inflates image size and RAM; launch it only when an adapter sets `needs_render`.
+- **Site drift** breaks curated adapters — guarded by the fixture self-test harness (`docker/tests/`,
+  v0.4.5): run `cd docker && pip install -r requirements-dev.txt && pytest`. Fixtures are frozen
+  snapshots (catch our own parsing regressions instantly); a real live-site change still needs a
+  manual fixture refresh (save the new page HTML over the fixture, rerun, fix what fails).
+- **Any new catch-all adapter must set `is_fallback = True`** (see `core/adapters/generic.py`).
+  `cover_url_allowed()` (the `/cover` proxy's only gate — routes/pages.py) deliberately skips
+  `is_fallback` adapters; forgetting the flag on a new "matches everything" adapter turns that
+  route into an open image proxy for arbitrary URLs.
+- **Playwright** inflates image size (base image is now `mcr.microsoft.com/playwright/python`,
+  pinned exactly — see `requirements.txt` comment — to match the Dockerfile tag) and adds ~1GB
+  RAM when active; the browser process itself is still launched lazily on first actual use, never
+  at container startup. A curated adapter that needs it sets `needs_render = True`; the generic
+  adapter instead auto-detects per-page (see `core/adapters/generic.py`) since it can't know a
+  site's needs in advance.
+- **Cloudflare bot-challenges are not the same problem as JS-rendered content.** Playwright solves
+  "content is injected by a script after load." It does not reliably solve "the site is actively
+  trying to detect and block headless browsers" (e.g. noveltrust.com/novellive.app, still shelved
+  in project-plan.md) — treat that as a distinct, harder, not-yet-attempted problem.
 - **Filename safety** on the share — sanitize `Author - Title.epub`, write atomically (temp + rename).
 - **EPUB validity** — target epubcheck-clean structure so Send-to-Kindle/Calibre don't choke.
 - **Politeness is a feature** — never remove/loosen rate limits to "go faster"; it's a design constraint, not a bug.
 
 ## Build-phase status
 
-See the status tables in [README](../README.md#versions) and [project-plan](project-plan.md#status). All phases currently ☐ not started — this repo is at the planning stage (docs only, no code yet).
-
-## First code steps (when the user says go)
-
-1. `git init`; scaffold the FastAPI app + Dockerfile + Compose-Manager-safe compose (Phase 0).
-2. SQLite models + Settings page (persist output path).
-3. Fetch layer + first curated adapter (Phase 1).
-4. Assembler + EbookLib EPUB + share writer → first end-to-end build (Phase 2).
+See the status tables in [README](../README.md#versions) and [project-plan](project-plan.md#status).
+Phases 0–4 are done (Phase 4 — Coverage — completed at v0.5.0); Phase 5 (Library & jobs) is in
+progress; Phase 7 (Content cleaning) has its first cut shipped. Current version: v0.5.0.
 
 After any deploy-affecting edit, hand off with a **▶ YOUR TURN** block: update the stack (copy the repo's `docker/` contents to `/mnt/user/appdata/webnovel-to-epub-scraper-docker/`, or `git pull`), then Compose Manager → Compose Up; wait for "built/confirmed" before verifying.

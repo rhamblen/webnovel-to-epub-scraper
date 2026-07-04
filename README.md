@@ -2,6 +2,8 @@
 
 > **What + why:** a self-hosted web app that finds a web novel, scrapes its chapters, assembles them into a single clean ebook, and drops an **EPUB** onto your Unraid file share — ready to read on a Kindle Paperwhite. Built to run as one Docker container on Unraid.
 
+This is a personal-use project, built for one reason: reading web novels on a Kindle Paperwhite. Reading them in a browser needs an internet connection for every chapter, and reading on an iPad instead trades that away for a battery that drains quickly and a screen that's unreadable in direct sunlight. E Ink has neither problem — so this tool's whole job is turning scraped chapters into a real EPUB that lands on the Paperwhite instead.
+
 Point it at a novel, pick the recommended source site, click **Build**, and a finished EPUB appears in your library share. No manual chapter-copying, no browser extensions, no desktop conversion dance.
 
 > ⚠️ **Personal-use tool.** Scrape only content you are permitted to read, obey each site's `robots.txt` and rate limits, and keep the output for your own device. See [ADR 0004](docs/decisions/0004-legal-and-ethical-use.md).
@@ -32,7 +34,9 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 | v0.4.2  | ☑ released | Live build progress; Settings page tidy-up; consistent book cards |
 | v0.4.3  | ☑ released | libread.com support; Royal Road adapter; webnovel.com free-chapter adapter |
 | v0.4.4  | ☑ released | Content cleaning (first cut): opt-in **Clean** button strips known junk phrases and site-name watermarks (incl. spacing/homoglyph obfuscation), with a per-book report of what was removed |
-| v0.5.0  | ◐ in progress | More adapters ✓ (Royal Road, webnovel.com, libread — shipped in v0.4.3); generic fallback scraper, JS-rendered (Playwright) sites, and an adapter self-test harness still pending |
+| v0.4.5  | ☑ released | Adapter self-test harness: pytest + saved-HTML fixtures per curated adapter, catches parsing regressions offline |
+| v0.4.6  | ☑ released | Generic fallback adapter: heuristic TOC discovery + readability-lxml content extraction, so importing "just works" on sites with no dedicated adapter |
+| v0.5.0  | ☑ released | Playwright rendering for JS-heavy sites, auto-detected by the generic adapter (no manual flag needed); Docker base image now bundles headless Chromium. Completes Phase 4 (Coverage) |
 | v0.6.0  | ◐ in progress | Live build progress ✓ + incremental rescan ✓ (shipped in v0.4.1–v0.4.2); a persistent job queue and a real library-management page (covers, direct rebuild/delete) still pending |
 | v1.0.0  | ☐ planned | Hardening, tests, Compose Manager install docs |
 
@@ -42,7 +46,8 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 |-------------|-----|
 | Unraid (or any Docker host) | Runs the container |
 | A file share for output | Where finished EPUBs land (e.g. `/mnt/user/books`) |
-| ~1 GB RAM free | Headless Chromium for JS-rendered sites |
+| ~1 GB RAM free | Headless Chromium for JS-rendered sites (launched only when actually needed) |
+| ~3 GB disk for the image | The Playwright base image bundles Chromium, Firefox, and WebKit + their OS dependencies |
 | (Optional) Calibre / Kavita on UR1 | Point them at the output share to manage/serve the books |
 
 ## Installation

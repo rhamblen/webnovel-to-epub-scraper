@@ -59,6 +59,10 @@ class Adapter(ABC):
     searchable: bool = False  # True if the adapter implements search()
     cover_hosts: tuple[str, ...] = ()  # extra hosts cover images may live on (CDNs)
     site_terms: tuple[str, ...] = ()  # brand tokens that may appear as an injected watermark
+    # True only for catch-all adapters (the generic fallback) whose matches() accepts
+    # any host. Such adapters must never grant the /cover proxy allowlist — see
+    # adapters.cover_url_allowed — or that route becomes an open proxy for any URL.
+    is_fallback: bool = False
 
     @classmethod
     @abstractmethod

@@ -9,6 +9,94 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 _Nothing yet._
 
+## [0.5.0] — 2026-07-04
+
+Completes Phase 4 (Coverage) — see `docs/project-plan.md`.
+
+### Added
+- **Playwright rendering for JS-heavy sites.** `core/render.py` — a `Renderer` wrapping
+  headless Chromium, launched lazily on first use and reused for the rest of the scrape
+  (spinning up a fresh browser per page would be far too slow for a multi-hundred-chapter
+  book). `Fetcher.get_rendered(url)` (`core/fetch.py`) exposes it alongside the existing
+  `get`/`post`, sharing the same robots.txt check, per-host pacing, concurrency cap, and
+  retry-with-backoff.
+- **Generic adapter now auto-detects JS-only pages** (`core/adapters/generic.py`) instead
+  of needing a site-specific flag set in advance: chapter bodies are fetched statically
+  first, and only re-fetched through `get_rendered` if the visible text is suspiciously
+  short (an unrendered `<div id="root">`-style shell). TOC/novel pages use a slightly
+  different check — chapter links are extracted from the static HTML *first*, and
+  rendering is only retried if that comes up empty *and* the page looks shell-like, since
+  a real TOC page is often link-dense but prose-*sparse* and would otherwise be misread
+  as unrendered. Curated adapters continue to use the static `needs_render` flag instead,
+  for sites already known upfront to require a browser.
+- Verified against a real headless Chromium run (not just the fake-Renderer unit tests in
+  `tests/test_render.py`): a local JS-only test page whose content is injected by a
+  `<script>` tag was correctly detected as unrendered, rendered, and its content extracted
+  end-to-end through `GenericAdapter.fetch_chapter`.
+
+### Changed
+- **Docker base image** switched from `python:3.12-slim` to
+  `mcr.microsoft.com/playwright/python:v1.61.0-noble` — pre-installed Python 3.12,
+  headless Chromium, and its OS-level dependencies, version-matched to the `playwright`
+  Python package (now pinned exactly in `requirements.txt`, not a range, since the pip
+  package and the base image's pre-installed browser binaries must stay in lockstep).
+  No separate `playwright install` build step needed. Meaningfully larger image (browsers
+  add well over 1GB) — the tradeoff Phase 4 always anticipated (see ADR 0001) — but the
+  browser process itself is still only launched lazily, on the first page that actually
+  needs it.
+
+## [0.4.6] — 2026-07-04
+
+### Added
+- **Generic fallback adapter (Phase 4).** `core/adapters/generic.py` — imports from sites
+  with no curated adapter, heuristically rather than via hand-written selectors (ADR 0003):
+  - **TOC discovery:** groups every link on the page by parent element and takes the
+    largest cluster that looks chapter-shaped (text/href like "Chapter 12" / "Ch. 12" /
+    a bare number) or is just very large, since some sites title chapters with no
+    "chapter" marker at all. Numbered in DOM order — a caveat surfaced via `Book.note`
+    for sites that list newest-first.
+  - **Chapter body:** `readability-lxml`'s `Document.summary()` (new prod dependency,
+    per [ADR 0001](docs/decisions/0001-tech-stack.md)) picks the highest text-density
+    block on the page, same as curated adapters' bodies feed through `clean_chapter_html`.
+  - Always matches any absolute http(s) URL and is appended last in the adapter registry,
+    so `get_adapter()` — and therefore "paste a URL and import" — now always finds
+    something instead of raising "No adapter supports this URL yet" for un-adapted sites.
+  - Not searchable (no way to search an arbitrary site by title) — Discover's search-sites
+    list is unaffected.
+
+### Fixed
+- **`/cover` proxy allowlist hole.** `cover_url_allowed()` used to treat "some adapter's
+  `matches()` returned true" as sufficient to let the `/cover?src=` route fetch a URL.
+  Adding the generic fallback (which matches *any* host) would have silently turned that
+  into an open image proxy for arbitrary URLs. Fixed by adding `Adapter.is_fallback`
+  (true only for `GenericAdapter`) and excluding fallback adapters from this check —
+  covers for generically-imported novels still embed correctly in the built EPUB (that
+  path fetches `Book.cover_path` directly, server-side, never through `/cover`), they
+  just won't show a thumbnail in the web UI. Covered by new `tests/test_registry.py`.
+
+## [0.4.5] — 2026-07-04
+
+### Added
+- **Adapter self-test harness (Phase 4).** `docker/tests/` — pytest + a `FixtureFetcher`
+  test double (`tests/support.py`) that serves saved HTML instead of hitting the network,
+  so curated-adapter parsing can be regression-tested offline and instantly. Each adapter
+  (freewebnovel/libread, royalroad, webnovel.com) gets hand-built fixtures
+  (`tests/fixtures/<adapter>/{novel,chapter,search}.html`) mirroring its documented,
+  live-verified selectors, plus:
+  - A shared parametrized contract (`test_adapter_contract.py`): `matches()` accepts its
+    own URLs and rejects others, `fetch_novel` parses title/author/cover/chapter-count,
+    `fetch_chapter` returns a non-empty body, `search` returns the expected result.
+  - Per-adapter quirk regressions: libread URLs normalize to the freewebnovel slug/host;
+    Royal Road's injected anti-theft paragraphs (hidden via inline `<style>`) are stripped;
+    webnovel.com refuses to scrape a chapter the source currently marks locked even if an
+    earlier book-page scan said it was free (the ADR 0004 paywall boundary).
+  - Test-only deps live in new `docker/requirements-dev.txt` (pytest, pytest-asyncio) —
+    not installed in the production image (`Dockerfile` still only installs
+    `requirements.txt`). Run via `cd docker && pip install -r requirements-dev.txt && pytest`.
+  - These fixtures are frozen snapshots, not live checks — they catch *our* parsing
+    regressions immediately; a real site markup change still needs a manual fixture
+    refresh (save the new page HTML, rerun, fix whatever selector the failure points at).
+
 ## [0.4.4] — 2026-07-04
 
 ### Added
