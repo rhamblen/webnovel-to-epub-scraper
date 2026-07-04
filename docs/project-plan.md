@@ -11,10 +11,10 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 1 — Scraper core    | v0.2.0 | ☑ | Fetch layer + first curated adapter (freewebnovel) |
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
 | 3 — Discovery       | v0.4.0 | ☑ | Search by title across a configurable site list (freewebnovel first) |
-| 4 — Coverage        | v0.5.0 | ◐ | royalroad adapter ✓ + webnovel metadata-only ✓; generic fallback + Playwright + self-test harness pending |
-| 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ + incremental update (rescan) ✓; persistent job queue + library mgmt pending |
+| 4 — Coverage        | v0.5.0 | ◐ | royalroad + webnovel.com (free-prefix) + libread adapters ✓ (shipped in v0.4.3); generic fallback + Playwright + self-test harness still pending |
+| 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ (v0.4.2) + rescan ✓ (v0.4.1); persistent job queue + real library-management page still pending — `Job` table/`/jobs` page exist but are currently unwired |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
-| 7 — Content cleaning| v1.1.0 | ◐ | Layer 0+2 ✓ (labeled, countable, opt-in per-build) + fuzzy scrub; frequency dedup + local-Ollama AI step pending |
+| 7 — Content cleaning| v1.1.0 | ◐ | Layer 0+2 ✓ (shipped in v0.4.4: labeled, countable, dedicated Clean/Re-clean button) + fuzzy/homoglyph scrub; frequency dedup + local-Ollama AI step still pending |
 | — v2.0 (future)     | v2.0.0 | ☐ | Whole pipeline orchestrated in **n8n** (import→scrape→clean→build), app becomes a stateless-ish service. See below. |
 
 Legend: ☐ not started · ◐ in progress · ☑ done
@@ -125,10 +125,10 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 
 - **Objective:** work on sites without a hand-written adapter, including JS-heavy ones.
 - **What we build:**
-  - Generic fallback extractor (readability-style) for TOC and chapter bodies with heuristics.
-  - Playwright rendering path for sites that need a real browser; auto-selected per adapter/site.
-  - 2–3 more curated adapters for the most common hosts.
-  - Adapter self-test harness (fixtures of saved HTML) to catch site drift.
+  - Generic fallback extractor (readability-style) for TOC and chapter bodies with heuristics. (☐ pending)
+  - Playwright rendering path for sites that need a real browser; auto-selected per adapter/site. (☐ pending)
+  - 2–3 more curated adapters for the most common hosts. (☑ done — royalroad, webnovel.com, libread; see "Candidate sites surveyed" below)
+  - Adapter self-test harness (fixtures of saved HTML) to catch site drift. (☐ pending)
 - **Prerequisites:** Phases 0–3.
 - **Deliverables:** "just paste a URL" works on most sites, best-effort, with clear warnings when quality is uncertain.
 - **Why:** maximizes the set of readable novels without unbounded per-site maintenance.
@@ -161,9 +161,16 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - **Objective:** manage a growing collection and keep books current.
 - **What we build:**
   - Library page: covers, status, chapter counts, last-updated; re-build / delete / open-in-share.
-  - Live job UI: per-chapter progress, logs, cancel, retry-failed-chapters.
-  - Incremental update: re-scrape only new chapters and append/rebuild the EPUB.
-  - Optional scheduled "check for new chapters" (cron-style) per book.
+    (◐ partial — chapter/book counts ✓ (`library.html`); no covers, and rebuild/delete/
+    open-in-share require drilling into the Novel detail page rather than acting from this
+    page directly)
+  - Live job UI: per-chapter progress, logs, cancel, retry-failed-chapters. (◐ partial — live
+    per-volume progress bar ✓ (v0.4.2, `core/progress.py`); no logs/cancel/retry yet. The
+    `Job` table + `/jobs` page already exist in the schema/routes but are currently dead code —
+    nothing ever writes a `Job` row; build progress is tracked separately via the in-memory
+    progress registry, not this table)
+  - Incremental update: re-scrape only new chapters and append/rebuild the EPUB. (☑ done — v0.4.1 "Rescan")
+  - Optional scheduled "check for new chapters" (cron-style) per book. (☐ pending)
 - **Prerequisites:** Phases 0–4.
 - **Deliverables:** a real library you maintain over time, not just one-shot builds.
 - **Why:** web novels are ongoing; updating without a full re-scrape is the day-2 value.
