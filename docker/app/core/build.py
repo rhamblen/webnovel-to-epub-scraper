@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 from .. import settings_store
 from ..config import config
 from ..models import Book, Chapter, Volume
-from . import progress, scrape
+from . import progress, reclean, scrape
 from .epub import ChapterDoc, build_epub
 from .pdf import build_pdf
 
@@ -48,7 +48,7 @@ async def _fetch_cover(s: Session, url: str | None):
         await fetcher.aclose()
 
 
-async def build_volume(engine, volume_id: int) -> dict:
+async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
     with Session(engine) as s:
         vol = s.get(Volume, volume_id)
         if vol is None:
@@ -77,6 +77,14 @@ async def build_volume(engine, volume_id: int) -> dict:
 
     # Download only this volume's range (idempotent — skips already-fetched chapters).
     await scrape.scrape_bodies(engine, book_id, start=start, end=end, progress_cb=_on_chapter)
+
+    if do_clean:
+        progress.update(volume_id, message="Cleaning chapters…")
+
+        def _on_clean(done: int) -> None:
+            progress.update(volume_id, message=f"Cleaning chapters… {done}/{total_range}")
+
+        reclean.clean_volume(engine, volume_id, progress_cb=_on_clean)
 
     with Session(engine) as s:
         vol = s.get(Volume, volume_id)

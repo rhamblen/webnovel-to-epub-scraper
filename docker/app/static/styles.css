@@ -117,3 +117,17 @@ button.ghost:hover { color: var(--err); border-color: var(--err); filter: none; 
 .build-progress small { display: block; margin-top: 0.35rem; }
 
 .foot { color: var(--muted); text-align: center; padding: 1.5rem; font-size: 0.85rem; }
+
+.clean-report {
+  flex: none;
+  min-width: 180px;
+  max-width: 260px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.85rem;
+}
+.clean-report h4 { margin: 0 0 0.4rem; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.clean-report .row { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; }
+.clean-report .total { border-top: 1px solid var(--border); margin-top: 0.35rem; padding-top: 0.35rem; font-weight: 600; }

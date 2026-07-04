@@ -40,6 +40,7 @@ class FreeWebNovelAdapter(Adapter):
     name = "freewebnovel"
     needs_render = False
     searchable = True
+    site_terms = ("freewebnovel", "libread")
 
     @classmethod
     def matches(cls, url: str) -> bool:

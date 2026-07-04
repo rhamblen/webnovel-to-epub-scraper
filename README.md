@@ -31,6 +31,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 | v0.4.1  | ☑ released | Rescan for new chapters; EPUB opens on cover; default output → `media/reading/webnovels` |
 | v0.4.2  | ☑ released | Live build progress; Settings page tidy-up; consistent book cards |
 | v0.4.3  | ☑ released | libread.com support; Royal Road adapter; webnovel.com free-chapter adapter |
+| v0.4.4  | ☑ released | Content cleaning (first cut): opt-in **Clean** button strips known junk phrases and site-name watermarks (incl. spacing/homoglyph obfuscation), with a per-book report of what was removed |
 | v0.5.0  | ☐ planned | Generic fallback scraper, JS-rendered sites, more adapters |
 | v0.6.0  | ☐ planned | Library management, live job progress, incremental updates |
 | v1.0.0  | ☐ planned | Hardening, tests, Compose Manager install docs |

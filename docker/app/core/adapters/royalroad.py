@@ -42,6 +42,7 @@ class RoyalRoadAdapter(Adapter):
     needs_render = False
     searchable = True
     cover_hosts = ("royalroadcdn.com",)
+    site_terms = ("royalroad",)
 
     @classmethod
     def matches(cls, url: str) -> bool:

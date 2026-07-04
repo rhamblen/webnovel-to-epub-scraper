@@ -9,6 +9,29 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 _Nothing yet._
 
+## [0.4.4] — 2026-07-04
+
+### Added
+- **Phase 7 (first cut) — standard-phrase cleanup + counts box.** A new **Clean** button next
+  to each book's Build/Rebuild (`app/templates/novel.html`) runs a labeled, countable pass
+  (`apply_standard_cleanup()` in `app/core/clean.py`, orchestrated per-volume by new
+  `app/core/reclean.py`) over already-scraped chapters: catches known boilerplate
+  (translator/editor credits, read-more/read-latest prompts) plus the book's own source-site
+  name via new `Adapter.site_terms` on each adapter, tolerant of spacing/punctuation
+  obfuscation (`f r e e w e b n o v e l`) **and per-letter Unicode homoglyph substitution**
+  (`frёeωebɳovel.com`) — the latter added after a real book (*The Scumbag's Guide To
+  Heroism* on freewebnovel.vip) turned out to actively rotate through Cyrillic/Greek/
+  Latin-Extended-B/small-capital look-alike characters to dodge exact-substring matching.
+  Results are tallied per label and shown in a report box next to the book on the Novel page
+  (new `Volume.clean_report` / `clean_report_at` columns, additive migration); the button
+  relabels to **Re-clean** once a report exists. Scoped to Phase 7's Layers 0+2 only —
+  cross-chapter frequency dedup (Layer 1) and the local-AI layers stay explicit follow-ups
+  (the homoglyph gap was considered for an AI-based fix but turned out to be a bounded,
+  deterministic normalization problem instead); see
+  `docs/phases/phase-7-content-cleaning.md` for the full breakdown. Verified live on
+  *The Scumbag's Guide To Heroism* (freewebnovel.vip) — confirmed against 10 real obfuscated
+  watermark variants, idempotent on re-run, no false positives on genuine accented prose.
+
 ## [0.4.3] — 2026-07-04
 
 ### Added

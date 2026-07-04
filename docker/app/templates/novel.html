@@ -26,7 +26,8 @@
   range and Save, then Build. A whole novel in one file = start 1, end {{ max_ch }}.</p>
 
 {% for row in vols %}
-<div class="card {% if not row.seq_ok %}warn{% endif %}" style="margin-bottom:0.75rem">
+<div style="display:flex;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:0.75rem">
+<div class="card {% if not row.seq_ok %}warn{% endif %}" style="flex:1;min-width:280px">
   {% if not row.seq_ok %}
   <div class="notice warn" style="margin-bottom:.6rem">⚠ Out of sequence — starts at chapter
     {{ row.v.start_chapter }}, expected {{ row.expected_start }} (right after the previous book).
@@ -67,6 +68,12 @@
       <form method="post" action="/volumes/{{ row.v.id }}/build" style="margin:0">
         <button type="submit">{% if row.v.epub_path or row.v.pdf_path %}Rebuild{% else %}Build{% endif %}</button>
       </form>
+      <form method="post" action="/volumes/{{ row.v.id }}/build" style="margin:0">
+        <input type="hidden" name="clean" value="1">
+        <button type="submit" class="ghost" title="Rebuild and remove known junk phrases">
+          {% if row.v.clean_report_at %}Re-clean{% else %}Clean{% endif %}
+        </button>
+      </form>
       <form method="post" action="/volumes/{{ row.v.id }}/delete" style="margin:0"
             onsubmit="return confirm('Delete this book? (does not delete already-built files)')">
         <button type="submit" class="ghost">Delete</button>
@@ -74,6 +81,20 @@
     </div>
   </div>
   {% endif %}
+</div>
+{% if row.v.clean_report_at %}
+<div class="clean-report">
+  <h4>Cleanup — {{ row.v.clean_report_at.strftime('%Y-%m-%d %H:%M') }}</h4>
+  {% if row.clean_report %}
+    {% for label, count in row.clean_report.items() %}
+    <div class="row"><span>{{ label }}</span><span>{{ count }}</span></div>
+    {% endfor %}
+    <div class="row total"><span>Total removed</span><span>{{ row.clean_total }}</span></div>
+  {% else %}
+    <p class="muted" style="margin:0">No known junk phrases found.</p>
+  {% endif %}
+</div>
+{% endif %}
 </div>
 {% else %}
 <div class="card placeholder"><p>No books defined yet. Add one below.</p></div>

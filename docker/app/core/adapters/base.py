@@ -58,6 +58,7 @@ class Adapter(ABC):
     needs_render: bool = False  # True if the site requires a real browser (Playwright)
     searchable: bool = False  # True if the adapter implements search()
     cover_hosts: tuple[str, ...] = ()  # extra hosts cover images may live on (CDNs)
+    site_terms: tuple[str, ...] = ()  # brand tokens that may appear as an injected watermark
 
     @classmethod
     @abstractmethod

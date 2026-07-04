@@ -69,6 +69,9 @@ class Volume(SQLModel, table=True):
     note: str = ""
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
+    # JSON {"label": count, ...} from the last standard-phrase cleanup pass; None = never run.
+    clean_report: Optional[str] = None
+    clean_report_at: Optional[datetime] = None
 
 
 class Job(SQLModel, table=True):

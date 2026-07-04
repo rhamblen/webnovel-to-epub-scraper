@@ -1,7 +1,47 @@
 # Phase 7 spec — Content cleaning (v1.1.0)
 
-**Status:** ☐ not started — this is a *forward spec* to build from, not a build log yet.
-Convert it to a build log (what-was-built / verification) as you implement.
+**Status:** ◐ in progress — Layers 0+2 shipped (2026-07-04) as a countable, opt-in pass; this
+doc is still the forward spec for the rest (Layer 1 dedup, Layer 3/4 AI). See "Shipped so far"
+below for what actually landed and where it deviates from the original design.
+
+## Shipped so far (2026-07-04)
+
+- **`core/clean.py`** gained `apply_standard_cleanup()` (+ `_GENERIC_JUNK_PATTERNS`,
+  `_spaced_token_pattern`, `_scrub`): a labeled, countable second pass over already-cleaned
+  `<p>` markup. Catches spacing/punctuated obfuscation of a book's own site name (via new
+  `Adapter.site_terms` on each adapter) plus the existing generic junk phrases, now labeled
+  (e.g. "Site name", "Translator credit") and tallied instead of silently dropped. Layer 0
+  (`clean_chapter_html` / `_JUNK_SUBSTRINGS`) is untouched.
+- **New `core/reclean.py`** (`clean_volume`) re-derives `Chapter.clean_html` for a volume's
+  chapter range and persists an aggregate report onto two new nullable `Volume` columns:
+  `clean_report` (JSON label→count) and `clean_report_at`.
+- **Trigger — deviates from the "manual re-clean only" decision below:** ships as a dedicated
+  **"Clean" / "Re-clean" button next to Build/Rebuild** (`novel.html` + `build_volume_route`
+  in `routes/pages.py`, wired through `build.build_volume(..., do_clean=)`), not a separate
+  standalone "Re-clean book" action. A live user request asked specifically for a rebuild-time
+  option with a visible counts box — first built as a checkbox on the build form, then changed
+  to its own button per follow-up feedback, since a separate button reads more clearly than a
+  modifier checkbox — recording the change here rather than leaving the old language looking
+  current.
+- **Homoglyph folding added (2026-07-04, same day):** a real book (*The Scumbag's Guide To
+  Heroism* on freewebnovel.vip) turned out to actively use per-letter Unicode look-alike
+  substitution to obfuscate its injected watermark, rotating through Cyrillic/Greek/Latin-
+  Extended-B/small-capital lookalikes for 1-3 letters per occurrence (e.g. `frёeωebɳovel.com`,
+  `fɾeeweɓnѳveɭ.com`) — confirmed against 10 real variants (5 pulled live, 5 reported by the
+  user from a built PDF) plus this doc's own `freewebnᴏvel` example. `_CONFUSABLE_GROUPS` in
+  `core/clean.py` folds ~25 Unicode letters per a-z slot (drawn from the families actually
+  observed) into the site-name regex, so `apply_standard_cleanup` now catches all of them —
+  including obfuscation inside the `.com`-style suffix itself. Verified idempotent and free of
+  false positives against genuine accented prose (Chloë, café, façade) and stylized small-caps
+  chapter-title text. Not a general Unicode-confusables library (e.g. Unicode's own
+  `confusables.txt`) — a curated table scoped to the letter-lookalike families actually seen
+  in the wild for this kind of watermark.
+- **Not done yet, still applies from the design below:** `Chapter.raw_html` is still
+  unpopulated (deferred to precede Layer 1, which actually needs untouched text to count
+  paragraph frequency correctly). Layer 1 (frequency dedup) and Layers 3/4 (AI) are entirely
+  unbuilt — the rest of this doc below is still the plan for them. (The AI layers were
+  considered as the fix for the homoglyph gap above and deliberately not used — this turned
+  out to be a bounded, deterministic text-normalization problem, not one needing inference.)
 
 **Goal:** strip two kinds of junk from scraped chapter bodies:
 1. **Repeated ad/comment blocks** at the end (or start) of chapters, identical across many chapters.
@@ -95,7 +135,10 @@ Layer 4 to Layer 3 output.
    layers using stored `raw_html` (no re-fetch). **Manual-trigger only** (see below).
 7. **Wire ordering** — chapter clean = Layers 0+2; whole-book pass = Layer 1 + optional Layer 3/4.
 
-### Trigger decision (agreed): manual re-clean only
+### Trigger decision (agreed, still applies to Layer 1/3/4): manual re-clean only
+- **Amended for Layers 0+2 (see "Shipped so far" above):** the countable Layers 0+2 pass
+  ships as a dedicated per-build "Clean"/"Re-clean" button, not a standalone action — a later,
+  more specific user request superseded this section for those two layers only.
 - The whole-book cleaning pass (Layer 1 dedup, and later Layer 3/4) runs **only when the user
   clicks "Re-clean book"** — it does **not** auto-run at the end of `scrape_bodies`.
 - Rationale: dedup/AI touch every chapter; eyeball the result on a book before trusting the

@@ -5,6 +5,7 @@ each into an EPUB written to the output share. Builds run as fire-and-forget asy
 tasks for now — Phase 5 replaces them with a persistent job queue + live progress.
 """
 import asyncio
+import json
 from pathlib import Path
 from urllib.parse import quote
 
@@ -136,9 +137,11 @@ def novel_detail(request: Request, book_id: int, error: str | None = None, msg: 
         for v in volumes:
             v_total, v_done = _counts(s, book_id, v.start_chapter, v.end_chapter)
             expected = prev_end + 1
+            report = json.loads(v.clean_report) if v.clean_report else {}
             vols.append({
                 "v": v, "total": v_total, "done": v_done, "building": v.id in _building,
                 "seq_ok": v.start_chapter == expected, "expected_start": expected,
+                "clean_report": report, "clean_total": sum(report.values()),
             })
             prev_end = v.end_chapter
         # Defaults for the "add a book" form: next book number, and start = one past the
@@ -233,7 +236,9 @@ async def delete_volume(volume_id: int):
 
 
 @router.post("/volumes/{volume_id}/build")
-async def build_volume_route(volume_id: int):
+async def build_volume_route(request: Request, volume_id: int):
+    form = await request.form()
+    do_clean = form.get("clean") is not None
     with Session(get_engine()) as s:
         vol = s.get(Volume, volume_id)
         book_id = vol.book_id if vol else None
@@ -243,7 +248,7 @@ async def build_volume_route(volume_id: int):
 
         async def _run():
             try:
-                await build.build_volume(get_engine(), volume_id)
+                await build.build_volume(get_engine(), volume_id, do_clean=do_clean)
             except Exception as e:
                 progress.finish(volume_id, "error", f"Build failed: {type(e).__name__}")
                 with Session(get_engine()) as s:

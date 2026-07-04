@@ -108,6 +108,7 @@ class WebnovelAdapter(Adapter):
     needs_render = False
     searchable = True
     cover_hosts = ("book-pic.webnovel.com",)
+    site_terms = ("webnovel",)
 
     @classmethod
     def matches(cls, url: str) -> bool:

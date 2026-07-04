@@ -14,7 +14,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 4 — Coverage        | v0.5.0 | ◐ | royalroad adapter ✓ + webnovel metadata-only ✓; generic fallback + Playwright + self-test harness pending |
 | 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ + incremental update (rescan) ✓; persistent job queue + library mgmt pending |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
-| 7 — Content cleaning| v1.1.0 | ☐ | Layered de-junk: frequency dedup + fuzzy scrub + local-Ollama AI step (app-orchestrated) |
+| 7 — Content cleaning| v1.1.0 | ◐ | Layer 0+2 ✓ (labeled, countable, opt-in per-build) + fuzzy scrub; frequency dedup + local-Ollama AI step pending |
 | — v2.0 (future)     | v2.0.0 | ☐ | Whole pipeline orchestrated in **n8n** (import→scrape→clean→build), app becomes a stateless-ish service. See below. |
 
 Legend: ☐ not started · ◐ in progress · ☑ done
@@ -188,14 +188,22 @@ Legend: ☐ not started · ◐ in progress · ☑ done
   mid-sentence, obfuscated forms) from chapter bodies, well beyond today's static substring
   blocklist in `core/clean.py`.
 - **What we build (layered, cheap→expensive, short-circuit early):**
-  - **Layer 0 — blocklist (exists):** current `_JUNK_SUBSTRINGS` per-paragraph drop.
-  - **Layer 1 — cross-chapter frequency dedup (no AI):** hash normalized paragraphs across a
-    book; a paragraph appearing in a high fraction of chapters (esp. first/last 1–2) is
-    boilerplate → drop. Near-dups via shingling / `difflib`. Runs as a post-scrape pass (whole
-    book is already in SQLite).
-  - **Layer 2 — fuzzy site-name scrub (no AI):** homoglyph/spacing normalization + regex removal
-    of known site tokens and templates (`read latest at …`, `updated on …`). Removes *fragments*,
-    not just whole paragraphs.
+  - **Layer 0 — blocklist (☑ done, exists):** current `_JUNK_SUBSTRINGS` per-paragraph drop.
+  - **Layer 1 — cross-chapter frequency dedup (☐ not started, no AI):** hash normalized
+    paragraphs across a book; a paragraph appearing in a high fraction of chapters (esp.
+    first/last 1–2) is boilerplate → drop. Near-dups via shingling / `difflib`. Runs as a
+    post-scrape pass (whole book is already in SQLite).
+  - **Layer 2 — fuzzy site-name scrub (☑ done, no AI):** regex removal of known site
+    tokens/templates tolerant of spaced-out/punctuated obfuscation (`f r e e w e b n o v e l`)
+    **and** per-letter Unicode homoglyph substitution (`frёeωebɳovel.com`, confirmed live on a
+    real book) — a curated confusables table (`_CONFUSABLE_GROUPS` in `core/clean.py`) folds
+    ~25 look-alike characters per letter, drawn from the Cyrillic/Greek/Latin-Extended-B/
+    small-capital families actually seen in the wild. Removes *fragments*, not just whole
+    paragraphs. Labeled + countable: each match is tagged (e.g. "Site name", "Translator
+    credit") and tallied per volume, shown in a report box on the Novel page. Ships as an
+    dedicated **Clean/Re-clean button** next to a volume's Build/Rebuild (see
+    `docs/phases/phase-7-content-cleaning.md` for the trigger-design amendment), not the
+    standalone "re-clean book" action originally sketched below.
   - **Layer 3 — local-Ollama AI step (UR1, GPU):** send the already-mostly-clean text to a small
     instruct model (`qwen2.5:7b` / `llama3.1:8b`) via **an n8n webhook** (`POST {text}` →
     `{junk_spans:[...]}`, JSON-schema constrained). n8n owns prompt/model/retries so tuning needs
