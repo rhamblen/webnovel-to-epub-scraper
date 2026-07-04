@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 
 from .. import settings_store
 from ..core import build, progress, scrape
-from ..core.adapters import get_adapter
+from ..core.adapters import cover_url_allowed, get_adapter
 from ..core.fetch import DEFAULT_UA
 from ..db import get_engine
 from ..models import Book, Chapter, Job, Volume
@@ -42,17 +42,21 @@ def _image_client() -> httpx.AsyncClient:
 @router.get("/cover")
 async def cover_proxy(src: str = ""):
     """Proxy a cover image so the browser doesn't hotlink the source (and to dodge
-    referer/hotlink checks). Restricted to hosts a curated adapter recognizes, so this
-    is not an open proxy."""
-    if not src or get_adapter(src) is None:
+    referer/hotlink checks). Restricted to hosts a curated adapter recognizes (novel
+    hosts + declared cover CDNs), so this is not an open proxy."""
+    if not src or not cover_url_allowed(src):
         return Response(status_code=404)
     try:
         r = await _image_client().get(src)
         if r.status_code != 200:
             return Response(status_code=404)
+        # Some cover CDNs (e.g. book-pic.webnovel.com) label images octet-stream.
+        media_type = r.headers.get("content-type", "")
+        if not media_type.startswith("image/"):
+            media_type = "image/jpeg"
         return Response(
             content=r.content,
-            media_type=r.headers.get("content-type", "image/jpeg"),
+            media_type=media_type,
             headers={"Cache-Control": "public, max-age=86400"},
         )
     except Exception:

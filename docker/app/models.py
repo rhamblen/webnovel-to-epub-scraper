@@ -32,6 +32,7 @@ class Book(SQLModel, table=True):
     cover_path: Optional[str] = None
     # new | scraping | ready | error
     status: str = "new"
+    note: str = ""  # adapter-supplied caveat, e.g. "only 25 of 269 chapters are free"
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
 

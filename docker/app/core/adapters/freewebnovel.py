@@ -5,12 +5,18 @@ but the `.vip` mirror serves the same catalogue as static HTML. This adapter nor
 any freewebnovel host + path to `https://freewebnovel.vip/freenovel/<slug>` and scrapes
 there.
 
+**libread.com** is another frontend of the same catalogue (its chapter links redirect
+straight to freewebnovel.com), so libread URLs are accepted too. Its novel paths look
+like `/libread/<slug>-<id>` where `<id>` is a numeric catalogue id the freewebnovel
+hosts don't use — normalizing means stripping that suffix.
+
 Structure (freewebnovel.vip), confirmed 2026-07:
   novel page    /freenovel/<slug>          title=h1.tit, author=a[href^="/author/"],
                                             cover=.m-imgtxt img, chapters=/chapter-<N>
   chapter page  /freenovel/<slug>/chapter-N  body=#article (<p>), title=h1.tit
 The chapter list on the novel page is paginated, so chapters are enumerated 1..N where
-N is the highest /chapter-<N> link found on the page.
+N is the highest /chapter-<N> link found on the page (the "latest chapters" block keeps
+that accurate even though the full list is paginated).
 """
 from __future__ import annotations
 
@@ -24,8 +30,9 @@ from ..fetch import Fetcher
 from .base import Adapter, ChapterContent, ChapterRef, NovelMeta, NovelResult, SearchResult
 
 HOST = "https://freewebnovel.vip"
-_HOST_RE = re.compile(r"(^|\.)freewebnovel\.", re.I)
+_HOST_RE = re.compile(r"(^|\.)(freewebnovel|libread)\.", re.I)
 _SLUG_RE = re.compile(r"/(?:free)?novel/([^/?#]+)")
+_LIBREAD_SLUG_RE = re.compile(r"/libread/([^/?#]+)")
 _CHAP_RE = re.compile(r"/chapter-(\d+)\b")
 
 
@@ -81,10 +88,14 @@ class FreeWebNovelAdapter(Adapter):
         return results
 
     def _slug(self, url: str) -> str:
-        m = _SLUG_RE.search(urlparse(url).path)
-        if not m:
-            raise ValueError(f"Not a recognizable freewebnovel novel URL: {url}")
-        return m.group(1)
+        path = urlparse(url).path
+        m = _SLUG_RE.search(path)
+        if m:
+            return m.group(1)
+        m = _LIBREAD_SLUG_RE.search(path)
+        if m:
+            return re.sub(r"-\d+$", "", m.group(1))
+        raise ValueError(f"Not a recognizable freewebnovel/libread novel URL: {url}")
 
     def _novel_url(self, slug: str) -> str:
         return f"{HOST}/freenovel/{slug}"

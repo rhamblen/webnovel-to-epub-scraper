@@ -11,7 +11,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 1 — Scraper core    | v0.2.0 | ☑ | Fetch layer + first curated adapter (freewebnovel) |
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
 | 3 — Discovery       | v0.4.0 | ☑ | Search by title across a configurable site list (freewebnovel first) |
-| 4 — Coverage        | v0.5.0 | ☐ | Generic fallback + JS sites + more adapters |
+| 4 — Coverage        | v0.5.0 | ◐ | royalroad adapter ✓ + webnovel metadata-only ✓; generic fallback + Playwright + self-test harness pending |
 | 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ + incremental update (rescan) ✓; persistent job queue + library mgmt pending |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
 | 7 — Content cleaning| v1.1.0 | ☐ | Layered de-junk: frequency dedup + fuzzy scrub + local-Ollama AI step (app-orchestrated) |
@@ -133,6 +133,28 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - **Deliverables:** "just paste a URL" works on most sites, best-effort, with clear warnings when quality is uncertain.
 - **Why:** maximizes the set of readable novels without unbounded per-site maintenance.
 - **Exit criteria:** an un-adapted static site and a JS-rendered site both produce usable EPUBs.
+- **Candidate sites surveyed (2026-07-04):**
+  - **libread.com — ☑ done (pre-Phase-4).** Same catalogue as freewebnovel (chapter links
+    redirect there); handled as URL normalization inside the existing adapter, not a new one.
+  - **noveltrust.com — ✗ shelved (Cloudflare).** Only the novel landing page is directly
+    reachable; TOC pagination (`/book/<slug>/2`) and every chapter URL 302 to `novellive.app`,
+    which is behind a Cloudflare JS challenge. Revisit when the Playwright path exists. For the
+    record: search = POST `/search/` (`searchkey`), selectors are freewebnovel-family
+    (`h1.tit`, `.m-imgtxt`), chapter URLs embed title slugs, TOC paginated in 40s.
+  - **royalroad.com — ☑ done.** Adapter with search + content (`royalroad.py`); full TOC on
+    the fiction page (no pagination); strips injected hidden anti-theft paragraphs. Still
+    possible later: a "browse rankings" discovery mode (`/fictions/best-rated`), per-fiction RSS.
+  - **webnovel.com — ☑ done (free-prefix content adapter).** Turned out *not* to be uniformly
+    paywalled: an author-controlled prefix of chapters (often dozens, sometimes zero) is served
+    free to any visitor, with the rest gated behind an in-app purchase. `webnovel.py` imports and
+    scrapes only that free prefix, parsing the book/chapter pages' own embedded JS state (an
+    unescaped object literal, normalized to JSON) rather than regex-scraping HTML. Every chapter
+    fetch re-checks the source's live `vipStatus`/`price` before scraping, so a chapter already
+    marked locked upstream is never touched regardless of what an earlier scan said. `Book.note`
+    / `SearchResult.note` surface "N of M chapters are free" so this is never silently partial.
+    First concrete piece of the D2 source-ranking idea (true upstream chapter count vs mirrors).
+  - All four blocked a datacenter-proxy fetch but served plain HTML to a browser UA — the
+    Fetcher's UA matters, and the fixture self-test harness is what catches tightening.
 
 ## Phase 5 — Library & jobs · v0.6.0
 

@@ -73,6 +73,7 @@ async def import_novel(engine, url: str) -> int:
         book.source_site = adapter.name
         book.cover_path = meta.cover_url
         book.language = meta.language
+        book.note = result.note
         book.status = "scraping"
         book.updated_at = _now()
         s.add(book)

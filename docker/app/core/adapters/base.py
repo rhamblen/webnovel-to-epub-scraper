@@ -39,6 +39,7 @@ class ChapterContent:
 class NovelResult:
     meta: NovelMeta
     chapters: list[ChapterRef] = field(default_factory=list)
+    note: str = ""  # surfaced on the Book, e.g. when only some chapters are scrapeable
 
 
 @dataclass
@@ -49,12 +50,14 @@ class SearchResult:
     cover_url: str | None = None
     chapters: int | None = None
     author: str = ""
+    note: str = ""  # short caveat shown next to the result, e.g. "25 free"
 
 
 class Adapter(ABC):
     name: str = "base"
     needs_render: bool = False  # True if the site requires a real browser (Playwright)
     searchable: bool = False  # True if the adapter implements search()
+    cover_hosts: tuple[str, ...] = ()  # extra hosts cover images may live on (CDNs)
 
     @classmethod
     @abstractmethod

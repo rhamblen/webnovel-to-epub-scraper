@@ -30,7 +30,9 @@
       </td>
       <td>{{ r.title }}</td>
       <td><small class="muted">{{ r.source }}</small></td>
-      <td>{{ r.chapters if r.chapters is not none else '—' }}</td>
+      <td>{{ r.chapters if r.chapters is not none else '—' }}
+        {% if r.note %}<br><small class="muted">{{ r.note }}</small>{% endif %}
+      </td>
       <td>
         <form method="post" action="/novels" style="margin:0">
           <input type="hidden" name="url" value="{{ r.url }}">

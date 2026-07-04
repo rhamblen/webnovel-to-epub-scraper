@@ -9,6 +9,38 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 _Nothing yet._
 
+## [0.4.3] — 2026-07-04
+
+### Added
+- **libread.com URLs now import.** libread turned out to be another frontend of the freewebnovel
+  catalogue (its chapter links redirect to freewebnovel.com), so the freewebnovel adapter now
+  matches `libread.*` hosts and normalizes `/libread/<slug>-<id>` paths (stripping the numeric
+  catalogue id) to the `.vip` mirror. Verified live: import → 219 chapters → chapter body clean.
+- **Royal Road adapter** (`app/core/adapters/royalroad.py`) — search (`/fictions/search?title=`),
+  full unpaginated TOC from the fiction page's chapter table, chapter bodies from
+  `.chapter-inner.chapter-content`, and stripping of Royal Road's injected anti-theft paragraphs
+  (elements whose class an inline `<style>` declares `display:none`). Second entry in the
+  Discover search-sites list. Verified live on *Mother of Learning* (109 chapters, 44K-char ch.1).
+- **webnovel.com adapter** (`app/core/adapters/webnovel.py`) — imports and scrapes *only* the
+  free chapter prefix a title has (webnovel.com serves early chapters to anyone, then paywalls
+  later ones via an in-app purchase). Both the book page and each chapter page embed their data
+  as an unescaped JS object literal, parsed and normalized to JSON rather than regex-scraped.
+  Every chapter fetch re-checks the source's own `vipStatus`/`price` before scraping — a chapter
+  is never touched once the source itself marks it locked. `Book.note` (new column) surfaces
+  "Only N of M chapters are free…" on the Novel page; Discover search results show the same via
+  `SearchResult.note`. Verified live: 25 of 269 chapters free, chapter 26 correctly refused.
+
+### Fixed
+- **Cover proxy allowlist:** `/cover` only allowed URLs a curated adapter `matches()`, which
+  would 404 Royal Road covers (they live on `royalroadcdn.com`). Adapters now declare
+  `cover_hosts` CDNs and the proxy checks `cover_url_allowed()`; non-image upstream
+  content-types (webnovel's CDN says `octet-stream`) are corrected to `image/jpeg`.
+
+### Notes
+- **noveltrust.com investigated and shelved:** only its novel landing page is directly
+  reachable — TOC pagination and every chapter URL 302 to `novellive.app`, which sits behind a
+  Cloudflare JS challenge. Revisit when the Phase 4 Playwright rendering path exists.
+
 ## [0.4.2] — 2026-07-03
 
 ### Changed

@@ -19,6 +19,7 @@
 
 {% if msg %}<div class="notice ok">{{ msg }}</div>{% endif %}
 {% if error %}<div class="notice err">{{ error }}</div>{% endif %}
+{% if book.note %}<div class="notice warn">{{ book.note }}</div>{% endif %}
 
 <h2>Books</h2>
 <p class="muted">Each “book” is a chapter range that builds into its own EPUB/PDF. You can edit a
