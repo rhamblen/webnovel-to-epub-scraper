@@ -1,0 +1,85 @@
+<div style="display:flex;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:0.75rem">
+<div class="card {% if not row.seq_ok %}warn{% endif %}" style="flex:1;min-width:280px">
+  {% if not row.seq_ok %}
+  <div class="notice warn" style="margin-bottom:.6rem">⚠ Out of sequence — starts at chapter
+    {{ row.v.start_chapter }}, expected {{ row.expected_start }} (right after the previous book).
+    Fix the start and Save.</div>
+  {% endif %}
+  <form method="post" action="/volumes/{{ row.v.id }}/edit"
+        hx-post="/volumes/{{ row.v.id }}/edit" hx-target="#volumes-{{ book_id }}" hx-swap="innerHTML"
+        style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;margin:0">
+    <div class="field" style="max-width:90px;margin:0"><label>Book #</label>
+      <input type="number" name="number" min="1" value="{{ row.v.number }}"></div>
+    <div class="field" style="flex:1;min-width:180px;margin:0"><label>Title</label>
+      <input type="text" name="title" value="{{ row.v.title }}" placeholder="(optional)"></div>
+    <div class="field" style="max-width:110px;margin:0"><label>Start</label>
+      <input type="number" name="start" min="1" value="{{ row.v.start_chapter }}"></div>
+    <div class="field" style="max-width:110px;margin:0"><label>End</label>
+      <input type="number" name="end" min="1" value="{{ row.v.end_chapter }}"></div>
+    <div class="actions" style="margin:0"><button type="submit">Save</button></div>
+  </form>
+
+  {% if row.building %}
+  <div class="build-progress" data-vid="{{ row.v.id }}" style="margin-top:.6rem">
+    <div class="bar"><div class="bar-fill" data-fill style="width:0%"></div></div>
+    <small class="muted" data-msg>Starting…</small>
+    {% if row.job_id %}
+    <form method="post" action="/jobs/{{ row.job_id }}/cancel"
+          hx-post="/jobs/{{ row.job_id }}/cancel" hx-target="#volumes-{{ book_id }}" hx-swap="innerHTML"
+          style="margin-top:.4rem">
+      <button type="submit" class="ghost">Cancel</button>
+    </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <div style="margin-top:.6rem">
+    <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+      <span class="muted">Downloaded {{ row.done }}/{{ row.total }}</span>
+      <span class="badge {{ row.v.status }}">{{ row.v.status }}</span>
+      {% if row.v.note %}<small class="muted">{{ row.v.note }}</small>{% endif %}
+    </div>
+    {% if row.v.epub_path or row.v.pdf_path %}
+    <div style="margin-top:.45rem;display:flex;gap:.85rem">
+      {% if row.v.epub_path %}<a href="/volumes/{{ row.v.id }}/download/epub"><small>📗 Download EPUB</small></a>{% endif %}
+      {% if row.v.pdf_path %}<a href="/volumes/{{ row.v.id }}/download/pdf"><small>📕 Download PDF</small></a>{% endif %}
+    </div>
+    {% endif %}
+    <div style="margin-top:.55rem;display:flex;gap:.5rem">
+      <form method="post" action="/volumes/{{ row.v.id }}/build"
+            hx-post="/volumes/{{ row.v.id }}/build" hx-target="#volumes-{{ book_id }}" hx-swap="innerHTML"
+            style="margin:0">
+        <button type="submit"
+          >{% if row.failed_count %}Retry {{ row.failed_count }} failed chapter{{ 's' if row.failed_count != 1 else '' }}{% elif row.v.epub_path or row.v.pdf_path %}Rebuild{% else %}Build{% endif %}</button>
+      </form>
+      <form method="post" action="/volumes/{{ row.v.id }}/build"
+            hx-post="/volumes/{{ row.v.id }}/build" hx-target="#volumes-{{ book_id }}" hx-swap="innerHTML"
+            style="margin:0">
+        <input type="hidden" name="clean" value="1">
+        <button type="submit" class="ghost" title="Rebuild and remove known junk phrases">
+          {% if row.v.clean_report_at %}Re-clean{% else %}Clean{% endif %}
+        </button>
+      </form>
+      <form method="post" action="/volumes/{{ row.v.id }}/delete"
+            hx-post="/volumes/{{ row.v.id }}/delete" hx-target="#volumes-{{ book_id }}" hx-swap="innerHTML"
+            onsubmit="return confirm('Delete this book? (does not delete already-built files)')"
+            style="margin:0">
+        <button type="submit" class="ghost">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% if row.v.clean_report_at %}
+<div class="clean-report">
+  <h4>Cleanup — {{ row.v.clean_report_at.strftime('%Y-%m-%d %H:%M') }}</h4>
+  {% if row.clean_report %}
+    {% for label, count in row.clean_report.items() %}
+    <div class="row"><span>{{ label }}</span><span>{{ count }}</span></div>
+    {% endfor %}
+    <div class="row total"><span>Total removed</span><span>{{ row.clean_total }}</span></div>
+  {% else %}
+    <p class="muted" style="margin:0">No known junk phrases found.</p>
+  {% endif %}
+</div>
+{% endif %}
+</div>

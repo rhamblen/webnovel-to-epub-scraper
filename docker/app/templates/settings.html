@@ -6,6 +6,8 @@
   Docker volume mapping, not here.)</p>
 
 {% if saved %}<div class="notice ok">Settings saved.</div>{% endif %}
+{% if msg %}<div class="notice ok">{{ msg }}</div>{% endif %}
+{% if error %}<div class="notice err">{{ error }}</div>{% endif %}
 
 <form method="post" action="/settings" class="card">
   {% set ns = namespace(section='') %}
@@ -46,4 +48,38 @@
     <button type="submit">Save settings</button>
   </div>
 </form>
+
+<h2 style="margin-top:1.5rem">Database backups</h2>
+<p class="muted">Point-in-time copies of the library database, stored on the output share
+  (safe from appdata mishaps). Restoring replaces the current library with the chosen
+  backup — the replaced database is itself saved first, so a restore can be undone.</p>
+<div class="card">
+  <form method="post" action="/settings/backup" style="margin:0 0 .9rem 0">
+    <button type="submit">Back up now</button>
+  </form>
+  {% if backups %}
+  <table class="grid">
+    <thead><tr><th>Backup</th><th>Taken</th><th>Size</th><th></th></tr></thead>
+    <tbody>
+    {% for b in backups %}
+      <tr>
+        <td>{{ b.name }}</td>
+        <td>{{ b.modified.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ b.size_mb }} MB</td>
+        <td style="white-space:nowrap;display:flex;gap:.5rem">
+          <form method="post" action="/settings/restore" style="margin:0"
+                onsubmit="return confirm('Replace the current library with {{ b.name }}? The current database is saved first, so this can be undone.')">
+            <input type="hidden" name="name" value="{{ b.name }}">
+            <button type="submit" class="ghost">Restore</button>
+          </form>
+          <a href="/settings/backups/{{ b.name }}/download"><small>Download</small></a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="margin:0">No backups yet — the daily run (or “Back up now”) will create the first one.</p>
+  {% endif %}
+</div>
 {% endblock %}

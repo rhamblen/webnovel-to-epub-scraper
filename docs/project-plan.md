@@ -12,7 +12,7 @@ single clean **EPUB**, and writes it to an Unraid file share for reading on a Ki
 | 2 — EPUB + books    | v0.3.0 | ☑ | Build EPUB + PDF per "book" (chapter range) + write to share |
 | 3 — Discovery       | v0.4.0 | ☑ | Search by title across a configurable site list (freewebnovel first) |
 | 4 — Coverage        | v0.5.0 | ☑ | royalroad + webnovel.com (free-prefix) + libread adapters (v0.4.3) + self-test harness (v0.4.5) + generic fallback (v0.4.6) + Playwright rendering (v0.5.0) — phase complete |
-| 5 — Library & jobs  | v0.6.0 | ◐ | Live build progress ✓ (v0.4.2) + rescan ✓ (v0.4.1); persistent job queue + real library-management page still pending — `Job` table/`/jobs` page exist but are currently unwired |
+| 5 — Library & jobs  | v0.6.0 | ☑ | Library-management page redesign + persistent job queue (cancel/retry/download/bulk actions) + build concurrency cap + daily DB backup/restore (v0.6.0); rescan ✓ (v0.4.1). Only the optional scheduled auto-check for new chapters is deferred (see Future) |
 | 6 — Hardening       | v1.0.0 | ☐ | Tests, Unraid CA template, docs, error handling |
 | 7 — Content cleaning| v1.1.0 | ◐ | Layer 0+2 ✓ (shipped in v0.4.4: labeled, countable, dedicated Clean/Re-clean button) + fuzzy/homoglyph scrub; frequency dedup + local-Ollama AI step still pending |
 | — v2.0 (future)     | v2.0.0 | ☐ | Whole pipeline orchestrated in **n8n** (import→scrape→clean→build), app becomes a stateless-ish service. See below. |
@@ -150,7 +150,7 @@ Legend: ☐ not started · ◐ in progress · ☑ done
     run against a JS-only test page.)
   - 2–3 more curated adapters for the most common hosts. (☑ done — royalroad, webnovel.com, libread; see "Candidate sites surveyed" below)
   - Adapter self-test harness (fixtures of saved HTML) to catch site drift. (☑ done —
-    pytest + a `FixtureFetcher` test double in `docker/tests/`; hand-built fixtures per
+    pytest + a `FixtureFetcher` test double in `tests/` (repo root); hand-built fixtures per
     curated adapter mirroring each one's documented live-verified selectors, a shared
     parametrized contract test, plus per-adapter quirk regressions — libread
     normalization, Royal Road anti-theft-paragraph stripping, webnovel.com's paywall
@@ -192,20 +192,59 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 - **Objective:** manage a growing collection and keep books current.
 - **What we build:**
   - Library page: covers, status, chapter counts, last-updated; re-build / delete / open-in-share.
-    (◐ partial — chapter/book counts ✓ (`library.html`); no covers, and rebuild/delete/
-    open-in-share require drilling into the Novel detail page rather than acting from this
-    page directly)
-  - Live job UI: per-chapter progress, logs, cancel, retry-failed-chapters. (◐ partial — live
-    per-volume progress bar ✓ (v0.4.2, `core/progress.py`); no logs/cancel/retry yet. The
-    `Job` table + `/jobs` page already exist in the schema/routes but are currently dead code —
-    nothing ever writes a `Job` row; build progress is tracked separately via the in-memory
-    progress registry, not this table)
-  - Incremental update: re-scrape only new chapters and append/rebuild the EPUB. (☑ done — v0.4.1 "Rescan")
-  - Optional scheduled "check for new chapters" (cron-style) per book. (☐ pending)
+    (☑ done — `library.html` redesign: cover thumbnails via the existing `/cover` proxy
+    (no new storage — the same proxy pattern `discover.html`/`novel.html` already used),
+    a per-book status badge derived from its volumes' build state, client-side search/sort
+    (title, author, chapter count — no server round-trip, appropriate at homelab library
+    sizes), bulk-select + bulk-rescan/bulk-delete (`POST /library/bulk-rescan`,
+    `/library/bulk-delete`, the latter backed by a new `_delete_book` helper — deleting a
+    whole novel didn't exist as an action anywhere before), and an expandable per-book
+    section that reuses the same volume-row partial as the Novel detail page
+    (`templates/_volume_row.html` + `_volumes_list.html`, extracted so both pages share
+    one implementation) with inline Build/Clean/Delete wired through real HTMX — the
+    first actual use of HTMX in this app; `static/htmx.min.js` was a placeholder stub
+    since Phase 0, now vendored for real (htmx 2.0.10). "Open-in-share" ships as real
+    EPUB/PDF download routes (`GET /volumes/{id}/download/{epub|pdf}`), since previously
+    there was no download action anywhere, only inert path text on the Novel page.)
+  - Live job UI: per-chapter progress, logs, cancel, retry-failed-chapters. (☑ done — the
+    `Job` table (`models.py`) is now the single source of truth for build/rescan progress,
+    replacing the old in-memory-only registry; `core/progress.py` reads/writes it directly,
+    and `GET /volumes/{id}/progress` keeps its existing response shape so the live
+    per-volume bar needed no template changes. `/jobs` shows real history (target
+    book/volume, type, state, progress, expandable message/error) with working Cancel
+    (`POST /jobs/{id}/cancel`, cooperative — checked between chapters in
+    `scrape.scrape_bodies`) and Retry (re-posts to the same `/volumes/{id}/build` route,
+    since re-running a build already only touches chapters missing `clean_html` —
+    idempotent by design from Phase 1, so "retry" needed no new logic, just visibility:
+    a new `Chapter.scrape_error` field records what/why a chapter failed, surfaced as a
+    "Retry N failed chapters" label on the Build button. A startup sweep in `main.py`'s
+    `lifespan()` marks any job still `pending`/`running`/`cancelling` at boot as
+    interrupted, so a crash mid-build doesn't leave a job stuck "running" forever.)
+  - Incremental update: re-scrape only new chapters and append/rebuild the EPUB. (☑ done
+    — v0.4.1 "Rescan"; now also recorded as a `Job` for history, kept synchronous since
+    it's one fast TOC fetch, not a body-scrape)
+  - Build queue with a concurrency cap. (☑ done — `core/queue.py`. Build clicks enqueue a
+    `pending` Job; one dispatcher promotes the oldest to `running`, at most
+    `max_concurrent_builds` (Settings, default 2) at once. Prevents the N-parallel-scrape
+    pile-up — found live when 14 builds ran at once, each with its own rate-limiter,
+    multiplying per-build politeness into an impolite site-wide load. The queue is just
+    Job rows, so a backlog survives restarts; a **Clear finished** button + per-row
+    dismiss keep the Jobs page from growing forever.)
+  - Daily DB backup + restore. (☑ done — `core/backup.py`, Settings → Backups. A scheduler
+    copies `app.db` once a day (default 01:00, configurable/disable-able) via SQLite's
+    online backup API, to `/output/.app-backups` on the media share — deliberately NOT
+    `/config`, so a deploy that wipes appdata can't take the backups too. Restore refuses
+    while a job runs and saves a `pre-restore` copy first. Motivated by a real data-loss
+    incident: a stray file-sync during a deploy wiped the live DB. Runs are recorded as
+    `Job`s.)
+  - Optional scheduled "check for new chapters" (cron-style) per book. (☐ deferred — the
+    only Phase 5 item not shipped; rescan-on-demand covers the update need, so this is a
+    later nice-to-have, tracked under Future / nice-to-have below.)
 - **Prerequisites:** Phases 0–4.
 - **Deliverables:** a real library you maintain over time, not just one-shot builds.
 - **Why:** web novels are ongoing; updating without a full re-scrape is the day-2 value.
-- **Exit criteria:** add a book, later run "update", only new chapters fetched, EPUB refreshed.
+- **Exit criteria:** add a book, later run "update", only new chapters fetched, EPUB
+  refreshed. (☑ met.)
 
 ## Phase 6 — Hardening · v1.0.0
 
@@ -297,6 +336,9 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 
 ## Future / nice-to-have (post-1.0)
 
+- Scheduled "check for new chapters" (cron-style) per book — the one deferred Phase 5
+  item. Would build on the existing rescan + job queue; auto-rescan on a timer, optionally
+  auto-rebuild affected books.
 - Delivery plugins: Calibre-Web, Kavita, Send-to-Kindle email.
 - AZW3/MOBI + PDF export.
 - Per-book cover art fetching and custom styling/themes.

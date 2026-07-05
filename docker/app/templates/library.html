@@ -3,17 +3,62 @@
 {% block content %}
 <h1>Library</h1>
 <p class="muted">Your novels. <a href="/discover">Add a novel →</a></p>
+
+{% if msg %}<div class="notice ok">{{ msg }}</div>{% endif %}
+{% if error %}<div class="notice err">{{ error }}</div>{% endif %}
+
 {% if rows %}
-<table class="grid">
-  <thead><tr><th>Novel</th><th>Author</th><th>Chapters</th><th>Books</th><th></th></tr></thead>
-  <tbody>
-  {% for r in rows %}
+<div class="card" style="margin-bottom:1rem">
+  <input type="text" id="lib-search" placeholder="Filter by title or author…" style="width:100%">
+</div>
+
+<form id="bulk-form" method="post"></form>
+<div id="bulk-toolbar" class="card" style="display:none;margin-bottom:.75rem;gap:.75rem;align-items:center">
+  <span class="muted" id="bulk-count">0 selected</span>
+  <button type="submit" form="bulk-form" formaction="/library/bulk-rescan" class="ghost">↻ Rescan selected</button>
+  <button type="submit" form="bulk-form" formaction="/library/bulk-delete" class="ghost"
+          onclick="return confirm('Delete the selected novels? (does not delete already-built files)')">Delete selected</button>
+</div>
+
+<table class="grid" id="lib-table">
+  <thead>
     <tr>
-      <td>{{ r.book.title }}</td>
-      <td>{{ r.book.author }}</td>
-      <td>{{ r.done }}/{{ r.total }}</td>
-      <td>{{ r.volumes }}</td>
-      <td><a href="/novels/{{ r.book.id }}">Manage →</a></td>
+      <th style="width:1.5rem"><input type="checkbox" id="lib-select-all"></th>
+      <th></th>
+      <th data-sort="title" style="cursor:pointer">Novel ↕</th>
+      <th data-sort="author" style="cursor:pointer">Author ↕</th>
+      <th data-sort="chapters" style="cursor:pointer">Chapters ↕</th>
+      <th>Books</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr class="lib-row" data-title="{{ row.book.title|lower }}" data-author="{{ row.book.author|lower }}">
+      <td><input type="checkbox" name="book_ids" value="{{ row.book.id }}" form="bulk-form" class="lib-check"></td>
+      <td>
+        {% if row.book.cover_path %}
+        <img src="/cover?src={{ row.book.cover_path | urlencode }}" alt="" loading="lazy"
+             style="width:40px;height:56px;object-fit:cover;border-radius:3px">
+        {% endif %}
+      </td>
+      <td>{{ row.book.title }}</td>
+      <td>{{ row.book.author }}</td>
+      <td>{{ row.done }}/{{ row.total }}</td>
+      <td>{{ row.volumes }}</td>
+      <td><span class="badge {{ row.status_class }}">{{ row.status_label }}</span></td>
+      <td><a href="/novels/{{ row.book.id }}">Manage →</a></td>
+    </tr>
+    <tr>
+      <td colspan="8" style="border-bottom:1px solid var(--border);padding:0 0 .75rem 0">
+        <details>
+          <summary class="muted" style="cursor:pointer;padding:.4rem 0">Books ({{ row.volumes }})</summary>
+          <div id="volumes-{{ row.book.id }}" style="padding-top:.5rem">
+            {% with book_id = row.book.id, vols = row.vols %}{% include "_volumes_list.html" %}{% endwith %}
+          </div>
+        </details>
+      </td>
     </tr>
   {% endfor %}
   </tbody>
@@ -23,4 +68,73 @@
   <p>No novels yet. <a href="/discover">Add one by URL</a> to get started.</p>
 </div>
 {% endif %}
+
+<script>
+(function () {
+  var table = document.getElementById('lib-table');
+  if (!table) return;
+  var tbody = table.querySelector('tbody');
+  var search = document.getElementById('lib-search');
+
+  function summaryRows() {
+    return Array.prototype.slice.call(tbody.querySelectorAll('tr.lib-row'));
+  }
+
+  // --- filter ---
+  function applyFilter() {
+    var q = (search.value || '').toLowerCase().trim();
+    summaryRows().forEach(function (tr) {
+      var hit = !q || tr.dataset.title.indexOf(q) !== -1 || tr.dataset.author.indexOf(q) !== -1;
+      tr.style.display = hit ? '' : 'none';
+      var details = tr.nextElementSibling;
+      if (details) { details.style.display = hit ? '' : 'none'; }
+    });
+  }
+  if (search) { search.addEventListener('input', applyFilter); }
+
+  // --- sort ---
+  table.querySelectorAll('th[data-sort]').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var key = th.getAttribute('data-sort');
+      var dir = th.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc';
+      table.querySelectorAll('th[data-sort]').forEach(function (t) { t.removeAttribute('data-dir'); });
+      th.setAttribute('data-dir', dir);
+      var pairs = summaryRows().map(function (tr) { return [tr, tr.nextElementSibling]; });
+      pairs.sort(function (a, b) {
+        var ta = a[0], tb = b[0], va, vb;
+        if (key === 'chapters') {
+          va = parseInt(ta.children[4].textContent, 10) || 0;
+          vb = parseInt(tb.children[4].textContent, 10) || 0;
+        } else {
+          va = key === 'title' ? ta.dataset.title : ta.dataset.author;
+          vb = key === 'title' ? tb.dataset.title : tb.dataset.author;
+        }
+        var cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        return dir === 'asc' ? cmp : -cmp;
+      });
+      pairs.forEach(function (pair) { tbody.appendChild(pair[0]); tbody.appendChild(pair[1]); });
+    });
+  });
+
+  // --- bulk select ---
+  var selectAll = document.getElementById('lib-select-all');
+  var toolbar = document.getElementById('bulk-toolbar');
+  var count = document.getElementById('bulk-count');
+  function checks() { return table.querySelectorAll('.lib-check'); }
+  function refreshToolbar() {
+    var n = Array.prototype.filter.call(checks(), function (c) { return c.checked; }).length;
+    toolbar.style.display = n ? 'flex' : 'none';
+    count.textContent = n + ' selected';
+  }
+  table.addEventListener('change', function (e) {
+    if (e.target.classList.contains('lib-check')) { refreshToolbar(); }
+  });
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      checks().forEach(function (c) { c.checked = selectAll.checked; });
+      refreshToolbar();
+    });
+  }
+})();
+</script>
 {% endblock %}

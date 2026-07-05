@@ -1,0 +1,35 @@
+{% if error %}<div class="notice err">{{ error }}</div>{% endif %}
+{% for row in vols %}
+  {% include "_volume_row.html" %}
+{% else %}
+<div class="card placeholder"><p>No books defined for this novel yet.</p></div>
+{% endfor %}
+
+<script>
+(function () {
+  document.querySelectorAll('.build-progress[data-vid]').forEach(function (el) {
+    var vid = el.getAttribute('data-vid');
+    var fill = el.querySelector('[data-fill]');
+    var msg = el.querySelector('[data-msg]');
+    function poll() {
+      fetch('/volumes/' + vid + '/progress', {cache: 'no-store'})
+        .then(function (r) { return r.json(); })
+        .then(function (st) {
+          if (st.total > 0 && st.done != null) {
+            fill.style.width = Math.min(100, Math.round(100 * st.done / st.total)) + '%';
+          }
+          if (st.message) { msg.textContent = st.message; }
+          // Finished when the job is gone and no longer marked active.
+          if (st.building === false && st.active === false) {
+            fill.style.width = '100%';
+            setTimeout(function () { location.reload(); }, 700);
+            return;
+          }
+          setTimeout(poll, 1500);
+        })
+        .catch(function () { setTimeout(poll, 3000); });
+    }
+    poll();
+  });
+})();
+</script>

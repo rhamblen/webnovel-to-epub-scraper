@@ -18,6 +18,18 @@ def get_engine():
     return _engine
 
 
+def reset_engine() -> None:
+    """Dispose the engine and its pooled connections (they hold the SQLite file open).
+
+    Required before swapping the database file on disk (restore-from-backup): a pooled
+    connection would otherwise keep serving the old, now-replaced file.
+    """
+    global _engine
+    if _engine is not None:
+        _engine.dispose()
+        _engine = None
+
+
 def init_db() -> None:
     # Import models so they register on SQLModel.metadata before create_all.
     from . import models  # noqa: F401

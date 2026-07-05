@@ -12,6 +12,7 @@ from .models import Setting
 def _defaults() -> dict[str, str]:
     return {
         "concurrency": "2",
+        "max_concurrent_builds": "2",
         "request_delay_seconds": "1.0",
         "user_agent": "",
         "format_epub": "true",
@@ -20,6 +21,9 @@ def _defaults() -> dict[str, str]:
         "embed_cover": "true",
         # Comma-separated list of adapter names the Discover search queries.
         "search_sites": "freewebnovel",
+        "backup_enabled": "true",
+        "backup_time": "01:00",
+        "backup_retention": "14",
     }
 
 
@@ -43,6 +47,16 @@ FIELDS = [
         "type": "number",
         "step": "0.1",
         "help": "Minimum pause between requests to the same site.",
+    },
+    {
+        "key": "max_concurrent_builds",
+        "section": "Scraping",
+        "label": "Builds running at once",
+        "type": "number",
+        "step": "1",
+        "help": "Further Build clicks queue up (shown as \"pending\" on the Jobs page) until a "
+        "slot frees. Each running build also obeys the per-request limits above, so total "
+        "load on a site is roughly this × max concurrent requests.",
     },
     {
         "key": "user_agent",
@@ -92,6 +106,30 @@ FIELDS = [
         "options": searchable_names(),
         "help": "Which sites the Discover search queries. More appear here as site adapters "
         "are added.",
+    },
+    # --- Backups ---
+    {
+        "key": "backup_enabled",
+        "section": "Backups",
+        "label": "Daily database backup",
+        "type": "checkbox",
+        "help": "Copy the library database to the backup folder once a day. Backups live "
+        "under the output share (not appdata), so a bad deploy can't take them out too.",
+    },
+    {
+        "key": "backup_time",
+        "section": "Backups",
+        "label": "Backup time (HH:MM)",
+        "type": "text",
+        "help": "Container-local time for the daily backup. Runs are recorded on the Jobs page.",
+    },
+    {
+        "key": "backup_retention",
+        "section": "Backups",
+        "label": "Backups to keep",
+        "type": "number",
+        "step": "1",
+        "help": "Oldest backups beyond this count are deleted after each daily run.",
     },
 ]
 

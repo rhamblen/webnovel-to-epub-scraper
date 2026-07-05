@@ -17,6 +17,10 @@ class AppConfig(BaseSettings):
     data_dir: Path = Path("/config")
     # Where finished EPUBs are written. Mounted to your books share as /output.
     output_dir: Path = Path("/output")
+    # Where daily DB backups land. Deliberately under /output, NOT /config: a botched
+    # deploy that wipes appdata must not take the backups with it. Dot-named so ebook
+    # library scanners watching the share ignore it. Override with WN_BACKUP_DIR.
+    backup_dir: Path = Path("/output/.app-backups")
 
     host: str = "0.0.0.0"
     port: int = 8080

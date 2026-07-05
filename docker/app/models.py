@@ -47,6 +47,8 @@ class Chapter(SQLModel, table=True):
     clean_html: Optional[str] = None
     content_hash: Optional[str] = None
     fetched_at: Optional[datetime] = None
+    # Set when the last fetch attempt failed (exception message); cleared on next success.
+    scrape_error: Optional[str] = None
 
 
 class Volume(SQLModel, table=True):
@@ -77,12 +79,17 @@ class Volume(SQLModel, table=True):
 class Job(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     book_id: Optional[int] = Field(default=None, foreign_key="book.id", index=True)
-    # build | update | scrape
+    volume_id: Optional[int] = Field(default=None, foreign_key="volume.id", index=True)
+    # build | rescan
     type: str = "build"
-    # pending | running | done | error | cancelled
+    # pending | running | cancelling | done | error | cancelled
     state: str = "pending"
+    phase: str = ""
+    # JSON job parameters (e.g. {"clean": true} for builds), set at enqueue time.
+    payload: Optional[str] = None
     completed: int = 0
     total: int = 0
+    message: str = ""
     log: str = ""
     error: Optional[str] = None
     created_at: datetime = Field(default_factory=_now)

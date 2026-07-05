@@ -18,8 +18,11 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 - **Split into books** — a long serial can be carved into multiple "books" by chapter range (start/end + book number), each built as its own EPUB with `calibre:series` metadata so they group in Calibre/Kavita. A whole novel is just one book spanning all chapters.
 - **Convert to EPUB (+ optional PDF)** — proper metadata (title, author, series, cover), a navigable table of contents, one chapter per section. Native reading on modern Kindle Paperwhite via Send-to-Kindle. A matching PDF can be produced alongside each EPUB (toggleable in Settings).
 - **Deliver to your library** — writes the EPUB straight to a configured Unraid share so Calibre/Kavita on UR1 can pick it up.
-- **Incremental updates** — re-run an existing book to fetch only newly-published chapters.
-- **Browser UI** — Discover, Library, Jobs (live progress), and Settings pages. No CLI needed.
+- **Incremental updates** — re-run an existing book to fetch only newly-published chapters ("Rescan").
+- **Manage a library** — the Library page shows every novel with cover, status badge, and chapter counts; search/sort, bulk rescan/delete, and inline Build/Clean/Delete/Download without leaving the page.
+- **A real job queue** — builds and rescans run as background **jobs** with live progress; cancel a running build, retry one that failed (only the missing chapters), and clear finished jobs from the log. A concurrency cap keeps many queued builds from hammering a source site all at once.
+- **Automatic backups** — the library database is backed up daily (configurable) to your output share, with one-click restore — so a bad deploy or a stray file-sync can't lose your collection.
+- **Browser UI** — Discover, Library, Jobs, and Settings pages. No CLI needed.
 - **Runs on Unraid** — single container, deployed via the Compose Manager plugin.
 
 ## Versions
@@ -37,7 +40,7 @@ Point it at a novel, pick the recommended source site, click **Build**, and a fi
 | v0.4.5  | ☑ released | Adapter self-test harness: pytest + saved-HTML fixtures per curated adapter, catches parsing regressions offline |
 | v0.4.6  | ☑ released | Generic fallback adapter: heuristic TOC discovery + readability-lxml content extraction, so importing "just works" on sites with no dedicated adapter |
 | v0.5.0  | ☑ released | Playwright rendering for JS-heavy sites, auto-detected by the generic adapter (no manual flag needed); Docker base image now bundles headless Chromium. Completes Phase 4 (Coverage) |
-| v0.6.0  | ◐ in progress | Live build progress ✓ + incremental rescan ✓ (shipped in v0.4.1–v0.4.2); a persistent job queue and a real library-management page (covers, direct rebuild/delete) still pending |
+| v0.6.0  | ☑ released | **Phase 5 complete.** Persistent job queue (cancel, retry-failed, survives restarts) with a build concurrency cap; redesigned Library page (covers, status badges, search/sort, bulk rescan/delete, inline actions); EPUB/PDF download; daily database backup + restore |
 | v1.0.0  | ☐ planned | Hardening, tests, Compose Manager install docs |
 
 ## Prerequisites
@@ -57,17 +60,56 @@ Deployed on Unraid via the **Compose Manager** plugin (full steps land in INSTAL
 ## How it works
 
 ```
-  ┌─────────┐   ┌──────────┐   ┌───────────┐   ┌───────────┐   ┌──────────┐
-  │ Discover │→ │ Scrape   │→ │ Assemble  │→ │ Convert   │→ │ Deliver  │
-  │ (find +  │   │ (adapter │   │ (master   │   │ (EPUB +   │   │ (write   │
-  │  rank)   │   │ or       │   │  document,│   │  metadata │   │  to      │
-  │          │   │ generic) │   │  cleaned) │   │  + TOC)   │   │  share)  │
-  └─────────┘   └──────────┘   └───────────┘   └───────────┘   └──────────┘
-       │              │              │               │              │
-       └──────────────┴──── job queue + SQLite state ┴──────────────┘
+┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+│ Discover │ → │ Scrape   │ → │ Assemble │ → │ Convert  │ → │ Deliver  │
+│ find +   │   │ adapter/ │   │ clean +  │   │ EPUB/PDF │   │ write to │
+│ rank     │   │ generic  │   │ order    │   │ + TOC    │   │ share    │
+└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘
+      │              │              │              │              │
+      └──── persistent jobs + SQLite state (survive restarts) ────┘
 ```
 
-A background worker runs the long-running scrape as a **job**; the UI polls live progress. Everything (settings, library, job state) persists in SQLite under `/config`.
+Each build or rescan runs as a background **job** and the UI polls live progress. Jobs are
+queued (at most *N* run at once, set in Settings) and recorded in the `Job` table, so
+history and any queued backlog **survive a restart** — nothing is lost if the container
+bounces mid-build. Everything else — settings, the library, chapter cache — persists in
+SQLite under `/config`, which is itself **backed up daily** to the output share.
+
+## The four pages
+
+| Page | What it's for |
+|------|---------------|
+| **Discover** | Search for a novel by title (across the sites enabled in Settings) or paste a table-of-contents URL directly. One click imports it. |
+| **Library** | Every imported novel: cover, author, chapter counts, and a status badge. Search/sort the list, select rows for bulk rescan/delete, or expand a novel to Build / Clean / Delete / Download its books inline. |
+| **Jobs** | Live and past build/rescan/backup jobs with progress bars. Cancel a running build, retry a failed one, dismiss individual entries, or clear all finished jobs. |
+| **Settings** | See below. |
+
+## Settings
+
+The **Settings** page is the single place to tune scraping behaviour, output formats, and
+backups — no config files to edit. All values persist in SQLite and take effect
+immediately (the container's `/output` and `/config` volume *locations* are the only things
+fixed by Docker, not set here).
+
+| Section | Setting | What it does |
+|---------|---------|--------------|
+| **Scraping** | Max concurrent requests | How many chapters download at once within a build. Keep low (2–4) to stay polite to the source. |
+| | Delay between requests | Minimum pause between requests to the same site. |
+| | Builds running at once | How many build jobs run in parallel; the rest queue. Prevents many builds from hammering a site simultaneously. |
+| | Custom User-Agent | Optional override; blank uses a browser-like default. |
+| **Output** | Build EPUB / Build PDF | Which formats each book produces (EPUB recommended for Kindle). |
+| | PDF page size | A5 (larger text, better for reading) or A4. |
+| | Embed book cover | Download the source cover and embed it in the EPUB. |
+| **Discovery** | Sites to search | Which site adapters the Discover search queries. |
+| **Backups** | Daily database backup | Toggle the automatic daily backup of the library database. |
+| | Backup time (HH:MM) | Container-local time for the daily run (default 01:00). |
+| | Backups to keep | Retention count; older backups are pruned after each run. |
+
+The Backups section also has a **Back up now** button and a list of existing backups, each
+with **Restore** (replaces the current library with that snapshot — safely, saving a
+pre-restore copy first) and **Download**. Backups are written to `/output/.app-backups`
+(the media share), deliberately *not* alongside the database, so an appdata mishap can't
+take them too.
 
 ## Documentation
 

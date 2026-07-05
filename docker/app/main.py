@@ -1,5 +1,6 @@
 """FastAPI entrypoint: wiring, startup, static/templates."""
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -8,6 +9,7 @@ from sqlmodel import Session
 
 from . import __version__, settings_store
 from .config import config
+from .core import backup, queue
 from .db import get_engine, init_db
 from .routes import health, pages
 
@@ -20,7 +22,19 @@ async def lifespan(app: FastAPI):
     init_db()
     with Session(get_engine()) as s:
         settings_store.seed_defaults(s)
+    # Jobs whose tasks died with the previous process are marked interrupted; queued
+    # (pending) ones are left alone — the dispatcher below resumes them.
+    queue.sweep_interrupted(get_engine())
+    background = [
+        asyncio.create_task(queue.dispatcher()),
+        asyncio.create_task(backup.scheduler()),
+    ]
     yield
+    for task in background:
+        task.cancel()
+    for task in background:
+        with suppress(asyncio.CancelledError):
+            await task
 
 
 app = FastAPI(title="Webnovel to EPUB Scraper", version=__version__, lifespan=lifespan)

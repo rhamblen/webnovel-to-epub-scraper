@@ -1,0 +1,27 @@
+# Standalone VPN-egress proxy used ONLY by the Literotica adapter — deliberately kept
+# out of the main webnovel-to-epub-scraper-docker stack (see that stack's compose file)
+# so it isn't tied to that stack's lifecycle and could be reused by other projects.
+#
+# Deploy as its OWN Compose Manager stack: copy this folder to
+# /mnt/user/appdata/literotica-vpn-proxy-docker/, Compose Manager -> Compose Up.
+#
+# Requirements before this will come up healthy:
+#   1. The existing "OpenVPN-Client" container (ghcr.io/ich777/openvpn-client) must
+#      already be running. This service shares its network namespace, so it has no
+#      network of its own until that container exists.
+#   2. OpenVPN-Client needs a port mapping added to ITSELF (Docker tab -> edit
+#      OpenVPN-Client -> add Port: container 8118 -> host 8118, TCP). A container using
+#      network_mode: container:X cannot publish its own ports -- only X can, since X
+#      owns the network namespace both containers share.
+#
+# Once up, the proxy is reachable LAN-wide at http://192.168.1.33:8118 (UR1's address)
+# and everything sent through it exits via OpenVPN-Client's NordVPN tunnel.
+services:
+  literotica-vpn-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: literotica-vpn-proxy:latest
+    container_name: literotica-vpn-proxy
+    network_mode: "container:OpenVPN-Client"
+    restart: unless-stopped

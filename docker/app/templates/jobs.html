@@ -3,23 +3,70 @@
 {% block content %}
 <h1>Jobs</h1>
 <p class="muted">Scrape and build jobs, most recent first.</p>
-{% if jobs %}
+{% if rows %}
+{% set finished = rows | selectattr("job.state", "in", ["done", "error", "cancelled"]) | list %}
+{% if finished %}
+<form method="post" action="/jobs/clear" style="margin:0 0 .9rem 0"
+      onsubmit="return confirm('Remove {{ finished | length }} finished job(s) from the log? Queued and running jobs are kept.')">
+  <button type="submit" class="ghost">Clear finished ({{ finished | length }})</button>
+</form>
+{% endif %}
 <table class="grid">
-  <thead><tr><th>#</th><th>Type</th><th>State</th><th>Progress</th></tr></thead>
+  <thead>
+    <tr><th>#</th><th>Target</th><th>Type</th><th>State</th><th>Progress</th><th>Details</th><th></th></tr>
+  </thead>
   <tbody>
-  {% for j in jobs %}
+  {% for row in rows %}
+    {% set j = row.job %}
     <tr>
       <td>{{ j.id }}</td>
+      <td>{{ row.target }}</td>
       <td>{{ j.type }}</td>
       <td><span class="badge {{ j.state }}">{{ j.state }}</span></td>
-      <td>{{ j.completed }}/{{ j.total }}</td>
+      <td>
+        {% if j.total %}
+        <div class="build-progress" style="min-width:120px">
+          <div class="bar"><div class="bar-fill" style="width:{{ (100 * j.completed / j.total) | round | int }}%"></div></div>
+        </div>
+        <small class="muted">{{ j.completed }}/{{ j.total }}</small>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td>
+        {% if j.message or j.error %}
+        <details>
+          <summary class="muted" style="cursor:pointer">{{ j.message or "Error" }}</summary>
+          {% if j.error %}<div class="notice err" style="margin-top:.4rem">{{ j.error }}</div>{% endif %}
+        </details>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+      <td style="white-space:nowrap">
+        {% if j.state in ("running", "pending") %}
+        <form method="post" action="/jobs/{{ j.id }}/cancel" style="margin:0">
+          <button type="submit" class="ghost">Cancel</button>
+        </form>
+        {% else %}
+        <div style="display:flex;gap:.4rem">
+          {% if j.state == "error" and j.volume_id %}
+          <form method="post" action="/volumes/{{ j.volume_id }}/build" style="margin:0">
+            <button type="submit" class="ghost">Retry</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/jobs/{{ j.id }}/delete" style="margin:0">
+            <button type="submit" class="ghost" title="Remove this entry from the job log">✕</button>
+          </form>
+        </div>
+        {% endif %}
+      </td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+{% if rows | selectattr("job.state", "in", ["pending", "running", "cancelling"]) | list %}
+<script>setTimeout(function () { location.reload(); }, 3000);</script>
+{% endif %}
 {% else %}
 <div class="card placeholder">
-  <p>No jobs yet. Live job progress lands in Phase 5.</p>
+  <p>No jobs yet. Build or rescan a novel to see it here.</p>
 </div>
 {% endif %}
 {% endblock %}

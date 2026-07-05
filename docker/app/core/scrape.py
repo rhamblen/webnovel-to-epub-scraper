@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from .. import settings_store
 from ..models import Book, Chapter
+from . import progress
 from .adapters import get_adapter, get_adapter_by_name
 from .adapters.base import SearchResult
 from .fetch import DEFAULT_UA, Fetcher
@@ -95,11 +96,19 @@ async def scrape_bodies(
     start: int | None = None,
     end: int | None = None,
     progress_cb=None,
+    job_id: int | None = None,
 ) -> dict:
     """Fetch cleaned bodies for chapters that don't have them yet.
 
     Optionally restrict to the inclusive chapter range [start, end]. ``progress_cb`` (if
-    given) is called with the running count of chapters fetched so far. Returns a summary.
+    given) is called with the running count of chapters fetched so far. If ``job_id`` is
+    given, the loop checks ``progress.is_cancelled`` before each chapter and stops early
+    (cooperative cancellation — the in-flight fetch for the current chapter still
+    completes). Returns a summary, including a chapters-still-missing failure trail via
+    ``Chapter.scrape_error`` (cleared on success, set to the exception message on
+    failure) so a retry can show what went wrong last time. Re-running this for the same
+    range is already idempotent — it only ever touches chapters missing ``clean_html``,
+    which is exactly "the failed/missing ones," so retry needs no separate code path.
     """
     from .adapters.base import ChapterRef
 
@@ -124,8 +133,12 @@ async def scrape_bodies(
 
         fetcher = _fetcher_from_settings(s)
         fetched = errors = 0
+        cancelled = False
         try:
             for ch in pending:
+                if job_id is not None and progress.is_cancelled(job_id):
+                    cancelled = True
+                    break
                 try:
                     content = await adapter.fetch_chapter(
                         fetcher, ChapterRef(number=ch.number, url=ch.source_url, title=ch.title)
@@ -134,11 +147,15 @@ async def scrape_bodies(
                     ch.clean_html = content.html
                     ch.content_hash = hashlib.sha1((content.html or "").encode("utf-8")).hexdigest()
                     ch.fetched_at = _now()
+                    ch.scrape_error = None
                     s.add(ch)
                     s.commit()
                     fetched += 1
-                except Exception:
+                except Exception as e:
                     errors += 1
+                    ch.scrape_error = str(e)[:500]
+                    s.add(ch)
+                    s.commit()
                 if progress_cb is not None:
                     try:
                         progress_cb(fetched)
@@ -154,4 +171,7 @@ async def scrape_bodies(
         book.updated_at = _now()
         s.add(book)
         s.commit()
-        return {"fetched": fetched, "errors": errors, "remaining": len(remaining)}
+        return {
+            "fetched": fetched, "errors": errors, "remaining": len(remaining),
+            "cancelled": cancelled,
+        }

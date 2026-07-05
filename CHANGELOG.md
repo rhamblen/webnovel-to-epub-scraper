@@ -9,6 +9,89 @@ Phases map loosely to minor versions (Phase 0 → v0.1.0).
 
 _Nothing yet._
 
+## [0.6.0] — 2026-07-05
+
+Completes Phase 5 (Library & jobs) — see `docs/project-plan.md`. The one deferred item,
+an optional scheduled "check for new chapters" poller, is intentionally left for later
+(rescan-on-demand already covers the day-2 update need).
+
+### Added
+- **Persistent job queue.** The `Job` table is now the single source of truth for
+  build/rescan progress and history, replacing the old in-memory-only registry —
+  `core/progress.py` reads/writes it directly, and it now survives a restart. `/jobs`
+  shows real history (target, type, state, progress, expandable message/error) instead
+  of being permanently empty.
+- **Cancel a running build** (`POST /jobs/{id}/cancel`) — cooperative, checked between
+  chapters in `scrape.scrape_bodies`.
+- **Retry failed chapters** — a new `Chapter.scrape_error` field records what/why a
+  chapter failed; the Build button becomes "Retry N failed chapters" when applicable.
+  No new retry logic needed — re-running a build already only touches chapters missing
+  `clean_html`.
+- **Startup sweep for orphaned jobs** — any `Job` still `pending`/`running`/`cancelling`
+  when the app starts (a crash or restart mid-build) is marked interrupted instead of
+  staying stuck "running" forever.
+- **EPUB/PDF download routes** (`GET /volumes/{id}/download/{epub|pdf}`) — there was
+  previously no way to retrieve a built file from the app itself, only inert path text.
+- **Library page redesign** — cover thumbnails (reusing the existing `/cover` proxy),
+  a per-book status badge, client-side search/sort, bulk-select with bulk-rescan and
+  bulk-delete (`POST /library/bulk-rescan`, `/library/bulk-delete`), and an expandable
+  per-book section with inline Build/Clean/Delete/Download — no more drilling into the
+  Novel detail page for routine actions.
+- **Delete a whole novel** (`POST /novels/{id}/delete`, plus the bulk-delete above) — only
+  per-volume delete existed before.
+- **Real HTMX**, replacing the placeholder `static/htmx.min.js` stub that had been in
+  place since Phase 0 (vendored htmx 2.0.10). Powers the Library page's inline actions;
+  `templates/_volume_row.html` and `_volumes_list.html` are shared by both the Library
+  and Novel detail pages so there's one implementation of a volume's card, not two.
+
+- **Daily database backup + restore** (`core/backup.py`, Settings page). A background
+  scheduler copies `app.db` once a day (default 01:00, configurable, can be disabled)
+  using SQLite's online backup API — safe against concurrent writes, unlike a raw file
+  copy of a live DB. Backups deliberately live under the **output share**
+  (`/output/.app-backups`, override with `WN_BACKUP_DIR`), not appdata, so a bad deploy
+  that wipes `/config` can't take the backups with it — the exact failure that motivated
+  this feature. Settings gains a Backups section: enable/time/retention fields, **Back up
+  now**, and a list of backups with **Restore** (refuses while a job is running; saves a
+  `pre-restore` copy of the current DB first so a mistaken restore is reversible) and
+  **Download**. Every run — scheduled or manual — is recorded as a `Job`, so backups show
+  up on the Jobs page. `docker-compose.yml` now sets `TZ=Europe/London` so the backup
+  time means local time, not UTC.
+
+- **Global build queue with a concurrency cap** (`core/queue.py`). Build clicks now
+  enqueue a `pending` Job instead of each spawning its own task; a single dispatcher
+  promotes the oldest pending builds to running, at most **"Builds running at once"**
+  (new Scraping setting, default 2) at a time. Before this, N Build clicks meant N
+  parallel scrape loops each with its own rate-limiter — found in practice when 14 ran
+  concurrently, multiplying per-build politeness limits into an impolite site-wide load.
+  Queued jobs show as `pending` on the Jobs page and can be cancelled before they start;
+  because the queue is just Job rows, a queued backlog **survives restarts** (the startup
+  sweep now only errors jobs that were actually mid-flight; pending ones resume — safe
+  because builds are idempotent).
+
+- **Jobs page cleanup.** The job log is history that only ever grew; now it can be
+  emptied: a **Clear finished (N)** button removes every done/error/cancelled entry in
+  one click (queued and running jobs are kept), and each finished row gets a **✕
+  dismiss** button — so an errored build can simply be removed from the log rather than
+  retried. Retry remains available next to dismiss for errored builds.
+
+### Changed
+- Rescan is now also recorded as a `Job` (for history in `/jobs`), though it stays
+  synchronous — it's a single TOC fetch, not a chapter body-scrape.
+- Repo hygiene: `docker/` is the folder copied verbatim to the server on deploys, so
+  everything dev-only moved to the repo root — `tests/` (with fixtures), `pytest.ini`,
+  `requirements-dev.txt` (its `-r` now points at `docker/requirements.txt`), the pytest
+  cache, and the standalone Literotica `vpn-proxy/` stack (its own Compose Manager
+  stack, `literotica-vpn-proxy-docker`, independent of the app). `docker/` now holds
+  exactly what the server needs: `app/`, `Dockerfile`, `docker-compose.yml`,
+  `.dockerignore`, `.env.example`, `requirements.txt`. Tests run from the repo root:
+  `pip install -r requirements-dev.txt && pytest`.
+
+### Fixed
+- First real build after the Phase 5 deploy crashed with `ValueError: "Job" object has
+  no field "done"` — three `build.py` progress calls still used the old in-memory
+  registry's `done=` key where the Job column is `completed`. Regression-tested in
+  `tests/test_progress.py` with the exact field sets `build.py` passes.
+
 ## [0.5.0] — 2026-07-04
 
 Completes Phase 4 (Coverage) — see `docs/project-plan.md`.

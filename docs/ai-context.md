@@ -55,8 +55,10 @@ Self-hosted web app: **find a web novel → scrape chapters → assemble → bui
   is handled at startup by `db._ensure_columns` (additive `ALTER TABLE ADD COLUMN`, nullable
   only). Renaming/removing columns or changing types still needs a manual migration or a DB reset.
 
-- **Site drift** breaks curated adapters — guarded by the fixture self-test harness (`docker/tests/`,
-  v0.4.5): run `cd docker && pip install -r requirements-dev.txt && pytest`. Fixtures are frozen
+- **Site drift** breaks curated adapters — guarded by the fixture self-test harness (`tests/`,
+  v0.4.5): from the repo root, `pip install -r requirements-dev.txt && pytest`. (Tests, pytest.ini,
+  and requirements-dev.txt all live at the repo root, NOT in `docker/` — that folder is copied
+  verbatim to the server on deploys and holds only what the container needs.) Fixtures are frozen
   snapshots (catch our own parsing regressions instantly); a real live-site change still needs a
   manual fixture refresh (save the new page HTML over the fixture, rerun, fix what fails).
 - **Any new catch-all adapter must set `is_fallback = True`** (see `core/adapters/generic.py`).

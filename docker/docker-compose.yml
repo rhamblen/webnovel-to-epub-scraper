@@ -16,6 +16,7 @@ services:
     environment:
       - WN_DATA_DIR=/config
       - WN_OUTPUT_DIR=/output
+      - TZ=Europe/London      # daily backup time in Settings is container-local time
     ports:
       - "8577:8080"          # host:container — change the host port if 8577 is taken
     volumes:

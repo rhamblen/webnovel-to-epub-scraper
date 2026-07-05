@@ -48,7 +48,7 @@ async def _fetch_cover(s: Session, url: str | None):
         await fetcher.aclose()
 
 
-async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
+async def build_volume(engine, volume_id: int, job_id: int, do_clean: bool = False) -> dict:
     with Session(engine) as s:
         vol = s.get(Volume, volume_id)
         if vol is None:
@@ -66,23 +66,43 @@ async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
         total_range = len(listed)
         already = sum(1 for c in listed if c.clean_html)
 
-    progress.start(volume_id, total=total_range, done=already,
-                   message=f"Downloading chapters… {already}/{total_range}")
+    progress.update(job_id, total=total_range, completed=already,
+                    message=f"Downloading chapters… {already}/{total_range}")
 
     def _on_chapter(fetched: int) -> None:
         progress.update(
-            volume_id, done=already + fetched,
+            job_id, completed=already + fetched,
             message=f"Downloading chapters… {already + fetched}/{total_range}",
         )
 
     # Download only this volume's range (idempotent — skips already-fetched chapters).
-    await scrape.scrape_bodies(engine, book_id, start=start, end=end, progress_cb=_on_chapter)
+    result = await scrape.scrape_bodies(
+        engine, book_id, start=start, end=end, progress_cb=_on_chapter, job_id=job_id
+    )
+
+    if result.get("cancelled"):
+        with Session(engine) as s:
+            vol = s.get(Volume, volume_id)
+            downloaded_so_far = sum(
+                1 for c in s.exec(
+                    select(Chapter).where(
+                        Chapter.book_id == book_id, Chapter.number >= start, Chapter.number <= end
+                    )
+                ).all() if c.clean_html
+            )
+            vol.status = "partial" if downloaded_so_far else "new"
+            vol.note = "Build cancelled"
+            vol.updated_at = _now()
+            s.add(vol)
+            s.commit()
+        progress.finish(job_id, "cancelled", "Build cancelled")
+        return {"status": "cancelled", "note": "Build cancelled"}
 
     if do_clean:
-        progress.update(volume_id, message="Cleaning chapters…")
+        progress.update(job_id, message="Cleaning chapters…")
 
         def _on_clean(done: int) -> None:
-            progress.update(volume_id, message=f"Cleaning chapters… {done}/{total_range}")
+            progress.update(job_id, message=f"Cleaning chapters… {done}/{total_range}")
 
         reclean.clean_volume(engine, volume_id, progress_cb=_on_clean)
 
@@ -102,7 +122,7 @@ async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
             vol.updated_at = _now()
             s.add(vol)
             s.commit()
-            progress.finish(volume_id, "error", "No downloaded chapters in range")
+            progress.finish(job_id, "error", "No downloaded chapters in range")
             return {"status": "error", "note": vol.note}
 
         cfg = settings_store.get_all(s)
@@ -119,7 +139,7 @@ async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
             vol.updated_at = _now()
             s.add(vol)
             s.commit()
-            progress.finish(volume_id, "error", "No output format enabled (see Settings)")
+            progress.finish(job_id, "error", "No output format enabled (see Settings)")
             return {"status": "error", "note": vol.note}
 
         vtitle = f"{book.title} - Book {vol.number:02d}"
@@ -130,10 +150,10 @@ async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         base = os.path.join(output_dir, safe_filename(vtitle))
 
-        progress.update(volume_id, phase="building", done=len(downloaded), total=len(in_range))
+        progress.update(job_id, phase="building", completed=len(downloaded), total=len(in_range))
 
         if want_epub:
-            progress.update(volume_id, message="Building EPUB…")
+            progress.update(job_id, message="Building EPUB…")
             epath = base + ".epub"
             tmp = epath + ".part"
             build_epub(
@@ -143,7 +163,7 @@ async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
             os.replace(tmp, epath)
             vol.epub_path = epath
         if want_pdf:
-            progress.update(volume_id, message="Building PDF…")
+            progress.update(job_id, message="Building PDF…")
             ppath = base + ".pdf"
             tmp = ppath + ".part"
             build_pdf(
@@ -158,7 +178,9 @@ async def build_volume(engine, volume_id: int, do_clean: bool = False) -> dict:
         vol.updated_at = _now()
         s.add(vol)
         s.commit()
-        progress.finish(volume_id, vol.status, f"Done — {vol.note}")
+        # vol.status here is only ever "ready" or "partial" (error cases already
+        # returned above) — the Job itself completed either way.
+        progress.finish(job_id, "done", f"Done — {vol.note}")
         return {
             "status": vol.status, "epub": vol.epub_path, "pdf": vol.pdf_path,
             "chapters": len(downloaded), "of": len(in_range),

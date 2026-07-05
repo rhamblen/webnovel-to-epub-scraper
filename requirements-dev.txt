@@ -1,0 +1,6 @@
+# Test-only dependencies, kept at the repo root with tests/ and pytest.ini — dev files
+# stay out of docker/, which is copied verbatim to the server on deploys. Never installed
+# in the production image (the Dockerfile only installs docker/requirements.txt).
+-r docker/requirements.txt
+pytest>=8.0,<9.0
+pytest-asyncio>=0.24,<0.25

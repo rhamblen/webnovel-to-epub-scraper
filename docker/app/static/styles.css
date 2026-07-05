@@ -99,7 +99,8 @@ button.ghost:hover { color: var(--err); border-color: var(--err); filter: none; 
 .badge { padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem; background: var(--panel-2); }
 .badge.ready, .badge.done { color: var(--ok); }
 .badge.error { color: var(--err); }
-.badge.scraping, .badge.running, .badge.pending { color: var(--warn); }
+.badge.scraping, .badge.running, .badge.pending, .badge.cancelling { color: var(--warn); }
+.badge.cancelled { color: var(--muted); }
 
 .build-progress .bar {
   height: 10px;
